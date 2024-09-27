@@ -1,4 +1,4 @@
-#!/usr/bin/env -S sh -c '"`dirname $(readlink -f $0)`/wrapper.sh" ruby "$0" "$@"'
+#!/usr/bin/env ruby
 
 require 'bundler/inline'
 
