@@ -1,0 +1,231 @@
+use std::io;
+use std::process::Command;
+use crossterm::{
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use tui::{
+    backend::{Backend, CrosstermBackend},
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    text::{Span, Spans},
+    widgets::{Block, Borders, List, ListItem, ListState},
+    Frame, Terminal,
+};
+
+struct Container {
+    name: String,
+    image: String,
+    ip_address: String,
+    ports: String,
+    status: String,
+}
+
+struct App {
+    containers: Vec<Container>,
+    state: ListState,
+}
+
+impl App {
+    fn new() -> App {
+        App {
+            containers: Vec::new(),
+            state: ListState::default(),
+        }
+    }
+
+    fn load_containers(&mut self) {
+        self.containers.clear();
+        
+        let output = Command::new("docker")
+            .args(["ps", "--format", "{{.Names}}|{{.Image}}|{{.Ports}}|{{.Status}}"])
+            .output()
+            .expect("Failed to execute docker ps");
+        
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        
+        for line in output_str.lines() {
+            let parts: Vec<&str> = line.split('|').collect();
+            if parts.len() >= 4 {
+                let name = parts[0].to_string();
+                let image = parts[1].to_string();
+                let ports = parts[2].to_string();
+                let status = parts[3].to_string();
+                
+                // Get container IP address
+                let ip_output = Command::new("docker")
+                    .args(["inspect", "--format", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", &name])
+                    .output()
+                    .expect("Failed to get container IP");
+                
+                let ip_address = String::from_utf8_lossy(&ip_output.stdout).trim().to_string();
+                
+                self.containers.push(Container {
+                    name,
+                    image,
+                    ip_address,
+                    ports,
+                    status,
+                });
+            }
+        }
+        
+        if !self.containers.is_empty() && self.state.selected().is_none() {
+            self.state.select(Some(0));
+        }
+    }
+
+    fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.containers.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.containers.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn open_browser(&self) {
+        if let Some(selected) = self.state.selected() {
+            if let Some(container) = self.containers.get(selected) {
+                let url = format!("http://{}", container.ip_address);
+                
+                #[cfg(target_os = "linux")]
+                Command::new("xdg-open").arg(&url).spawn().ok();
+                
+                #[cfg(target_os = "macos")]
+                Command::new("open").arg(&url).spawn().ok();
+                
+                #[cfg(target_os = "windows")]
+                Command::new("cmd").args(["/c", "start", &url]).spawn().ok();
+            }
+        }
+    }
+
+    fn copy_ip(&self) {
+        if let Some(selected) = self.state.selected() {
+            if let Some(container) = self.containers.get(selected) {
+                // This is a simplified version - in a real implementation,
+                // you would use a clipboard library
+                println!("IP copied: {}", container.ip_address);
+            }
+        }
+    }
+
+    fn stop_container(&mut self) {
+        if let Some(selected) = self.state.selected() {
+            if let Some(container) = self.containers.get(selected) {
+                Command::new("docker")
+                    .args(["stop", &container.name])
+                    .output()
+                    .expect("Failed to stop container");
+                
+                // Reload containers to reflect the changes
+                self.load_containers();
+            }
+        }
+    }
+}
+
+fn main() -> Result<(), io::Error> {
+    // Setup terminal
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    // Create app and load containers
+    let mut app = App::new();
+    app.load_containers();
+
+    // Main loop
+    loop {
+        terminal.draw(|f| ui(f, &mut app))?;
+
+        if let Event::Key(key) = event::read()? {
+            match key.code {
+                KeyCode::Char('q') => break,
+                KeyCode::Char('j') => app.next(),
+                KeyCode::Char('k') => app.previous(),
+                KeyCode::Char('c') => app.copy_ip(),
+                KeyCode::Char('l') => app.open_browser(),
+                KeyCode::Char('x') => app.stop_container(),
+                KeyCode::Char('r') => app.load_containers(),
+                _ => {}
+            }
+        }
+    }
+
+    // Restore terminal
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    Ok(())
+}
+
+fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(1)
+        .constraints([Constraint::Percentage(100)].as_ref())
+        .split(f.size());
+
+    let items: Vec<ListItem> = app.containers
+        .iter()
+        .map(|container| {
+            let lines = vec![
+                Spans::from(vec![
+                    Span::styled(
+                        format!("{} ", container.name),
+                        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                    ),
+                    Span::raw(format!("({})", container.image)),
+                ]),
+                Spans::from(vec![
+                    Span::styled("IP: ", Style::default().fg(Color::Blue)),
+                    Span::raw(&container.ip_address),
+                    Span::styled(" Ports: ", Style::default().fg(Color::Blue)),
+                    Span::raw(&container.ports),
+                ]),
+                Spans::from(vec![
+                    Span::styled("Status: ", Style::default().fg(Color::Yellow)),
+                    Span::raw(&container.status),
+                ]),
+                Spans::from(""),
+            ];
+            ListItem::new(lines)
+        })
+        .collect();
+
+    let list = List::new(items)
+        .block(Block::default().title("Docker Containers").borders(Borders::ALL))
+        .highlight_style(Style::default().bg(Color::DarkGray))
+        .highlight_symbol("> ");
+
+    f.render_stateful_widget(list, chunks[0], &mut app.state);
+}

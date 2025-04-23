@@ -1,0 +1,140 @@
+use std::{
+    io::{self, stdout},
+    time::Duration,
+};
+
+use crossterm::{
+    event::{self, Event, KeyCode, KeyEvent},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+
+use tui::{
+    backend::{Backend, CrosstermBackend},
+    layout::{Constraint, Direction, Layout, Rect},
+    Terminal,
+};
+
+mod app;
+mod display;
+
+use app::actions::{copy_ip_address, open_browser, stop_container};
+use app::state_machine::{AppEvent, AppState};
+use display::toast::{Toast, ToastManager};
+use display::hotkey_bar::render_hotkey_bar;
+use display::process_list::render_container_list;
+
+fn main() -> Result<(), io::Error> {
+    // Setup terminal
+    enable_raw_mode()?;
+    let mut stdout = stdout();
+    execute!(stdout, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    // Create app state
+    let mut app_state = AppState::new();
+    app_state.load_containers();
+
+    // Create toast manager
+    let mut toast_manager = ToastManager::new();
+
+    // Run app
+    let res = run_app(&mut terminal, &mut app_state, &mut toast_manager);
+
+    // Restore terminal
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    terminal.show_cursor()?;
+
+    if let Err(err) = res {
+        println!("Error: {}", err);
+    }
+
+    Ok(())
+}
+
+fn run_app<B: Backend>(
+    terminal: &mut Terminal<B>,
+    app_state: &mut AppState,
+    toast_manager: &mut ToastManager,
+) -> Result<(), io::Error> {
+    loop {
+        // Check if toasts have expired
+        toast_manager.check_expired();
+
+        // Draw UI
+        terminal.draw(|f| {
+            let size = f.size();
+            
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Min(1),
+                    Constraint::Length(3),
+                ].as_ref())
+                .split(size);
+
+            // Render container list
+            render_container_list(f, app_state, chunks[0]);
+            
+            // Render hotkey bar
+            render_hotkey_bar(f, chunks[1]);
+            
+            // Render toast if any
+            if let Some(toast) = toast_manager.get_toast() {
+                let toast_width = toast.message.len() as u16 + 4;
+                let toast_height = 3;
+                let toast_x = (size.width - toast_width) / 2;
+                let toast_y = (size.height - toast_height) / 2;
+                let toast_area = Rect::new(toast_x, toast_y, toast_width, toast_height);
+                
+                let toast_block = tui::widgets::Block::default()
+                    .borders(tui::widgets::Borders::ALL)
+                    .style(tui::style::Style::default().bg(tui::style::Color::DarkGray));
+                
+                let toast_text = tui::widgets::Paragraph::new(tui::text::Spans::from(toast.message.clone()))
+                    .block(toast_block)
+                    .style(tui::style::Style::default().fg(tui::style::Color::White));
+                
+                f.render_widget(toast_text, toast_area);
+            }
+        })?;
+
+        // Handle input
+        if event::poll(Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                match key.code {
+                    KeyCode::Char('q') => break,
+                    KeyCode::Char('j') | KeyCode::Down => app_state.handle_event(AppEvent::Next),
+                    KeyCode::Char('k') | KeyCode::Up => app_state.handle_event(AppEvent::Previous),
+                    KeyCode::Char('c') => {
+                        match copy_ip_address(app_state) {
+                            Ok(_) => toast_manager.show("IP address copied to clipboard", 2000),
+                            Err(e) => toast_manager.show(&format!("Error: {}", e), 2000),
+                        }
+                    }
+                    KeyCode::Char('l') => {
+                        match open_browser(app_state) {
+                            Ok(_) => toast_manager.show("Opening browser", 2000),
+                            Err(e) => toast_manager.show(&format!("Error: {}", e), 2000),
+                        }
+                    }
+                    KeyCode::Char('x') => {
+                        match stop_container(app_state) {
+                            Ok(_) => toast_manager.show("Container stopped", 2000),
+                            Err(e) => toast_manager.show(&format!("Error: {}", e), 2000),
+                        }
+                    }
+                    KeyCode::Char('r') => {
+                        app_state.load_containers();
+                        toast_manager.show("Containers reloaded", 2000);
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    Ok(())
+}

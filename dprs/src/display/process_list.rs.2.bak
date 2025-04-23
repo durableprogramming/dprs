@@ -1,0 +1,50 @@
+use tui::{
+    backend::Backend,
+    layout::Rect,
+    style::{Color, Modifier, Style},
+    text::Span,
+    widgets::{Block, Borders, List, ListItem},
+    Frame,
+};
+
+use crate::app::state_machine::AppState;
+
+pub fn render_container_list<B: Backend>(f: &mut Frame<B>, app_state: &mut AppState, area: Rect) {
+    let items: Vec<ListItem> = app_state
+        .containers
+        .iter()
+        .map(|container| {
+            let status_style = if container.status.contains("Up") {
+                Style::default().fg(Color::Green)
+            } else {
+                Style::default().fg(Color::Red)
+            };
+
+            let spans = vec![
+                Span::styled(&container.name, Style::default().fg(Color::Yellow)),
+                Span::raw(" | "),
+                Span::styled(&container.image, Style::default().fg(Color::Blue)),
+                Span::raw(" | "),
+                Span::styled(&container.ip_address, Style::default().fg(Color::Cyan)),
+                Span::raw(" | "),
+                Span::styled(&container.ports, Style::default().fg(Color::Magenta)),
+                Span::raw(" | "),
+                Span::styled(&container.status, status_style),
+            ];
+
+            ListItem::new(spans)
+        })
+        .collect();
+
+    let containers = List::new(items)
+        .block(Block::default().borders(Borders::ALL).title("Docker Containers"))
+        .highlight_style(
+            Style::default()
+                .bg(Color::DarkGray)
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol("> ");
+
+    f.render_stateful_widget(containers, area, &mut app_state.list_state);
+}

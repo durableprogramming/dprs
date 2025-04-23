@@ -1,0 +1,128 @@
+use std::{
+    io::{self, stdout},
+    process::{Command, exit},
+    time::Duration,
+};
+
+use crossterm::{
+    event::{self, Event, KeyCode, KeyModifiers},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use tui::{
+    backend::CrosstermBackend,
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Style},
+    text::Spans,
+    widgets::{Block, Borders, Paragraph},
+    Terminal,
+};
+
+use dprs::app::state_machine::{AppState, AppEvent};
+use dprs::app::actions::{copy_ip_address, open_browser, stop_container};
+use dprs::display::{render_container_list, render_hotkey_bar, ToastManager};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Set up the terminal
+    enable_raw_mode()?;
+    let mut stdout = stdout();
+    execute!(stdout, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    // Set up app state
+    let mut app_state = AppState::new();
+    app_state.load_containers();
+
+    // Set up toast manager
+    let mut toast_manager = ToastManager::new();
+
+    // Main loop
+    let mut running = true;
+    while running {
+        terminal.draw(|f| {
+            let size = f.size();
+            
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Min(3),
+                    Constraint::Length(3),
+                ].as_ref())
+                .split(size);
+            
+            render_container_list(f, &mut app_state, chunks[0]);
+            render_hotkey_bar(f, chunks[1]);
+            
+            // Display toast if any
+            if let Some(toast) = toast_manager.get_toast() {
+                let toast_block = Block::default()
+                    .borders(Borders::ALL)
+                    .style(Style::default().bg(Color::DarkGray));
+                
+                let toast_text = Paragraph::new(Spans::from(toast.message.clone()))
+                    .block(toast_block)
+                    .style(Style::default().fg(Color::White));
+                
+                let toast_area = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([
+                        Constraint::Percentage(45),
+                        Constraint::Length(3),
+                        Constraint::Percentage(45),
+                    ].as_ref())
+                    .split(size)[1];
+                
+                f.render_widget(toast_text, toast_area);
+            }
+        })?;
+        
+        toast_manager.check_expired();
+
+        if event::poll(Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                match key.code {
+                    KeyCode::Char('q') => {
+                        running = false;
+                    },
+                    KeyCode::Char('j') | KeyCode::Down => {
+                        app_state.handle_event(AppEvent::Next);
+                    },
+                    KeyCode::Char('k') | KeyCode::Up => {
+                        app_state.handle_event(AppEvent::Previous);
+                    },
+                    KeyCode::Char('c') => {
+                        match copy_ip_address(&app_state) {
+                            Ok(_) => toast_manager.show("IP copied to clipboard", 1500),
+                            Err(e) => toast_manager.show(&format!("Error: {}", e), 2000),
+                        }
+                    },
+                    KeyCode::Char('l') => {
+                        match open_browser(&app_state) {
+                            Ok(_) => toast_manager.show("Opening in browser...", 1500),
+                            Err(e) => toast_manager.show(&format!("Error: {}", e), 2000),
+                        }
+                    },
+                    KeyCode::Char('x') => {
+                        match stop_container(&mut app_state) {
+                            Ok(_) => toast_manager.show("Container stopped", 1500),
+                            Err(e) => toast_manager.show(&format!("Error: {}", e), 2000),
+                        }
+                    },
+                    KeyCode::Char('r') => {
+                        app_state.load_containers();
+                        toast_manager.show("Containers reloaded", 1500);
+                    },
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    // Restore terminal
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    terminal.show_cursor()?;
+
+    Ok(())
+}

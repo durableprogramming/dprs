@@ -1,0 +1,111 @@
+3c3
+<     layout::Rect,
+---
+>     layout::{Alignment, Constraint, Direction, Layout, Rect},
+5,6c5,6
+<     text::Span,
+<     widgets::{Block, Borders, List, ListItem},
+---
+>     text::{Span, Spans},
+>     widgets::{Block, Borders, List, ListItem, Paragraph},
+12c12,29
+< pub fn render_container_list<B: Backend>(f: &mut Frame<B>, app_state: &mut AppState, area: Rect) {
+---
+> pub fn render_container_list<B: Backend>(f: &mut Frame<B>, area: Rect, app_state: &mut AppState) {
+>     let chunks = Layout::default()
+>         .direction(Direction::Vertical)
+>         .margin(0)
+>         .constraints([
+>             Constraint::Length(1),
+>             Constraint::Min(0),
+>             Constraint::Length(3),
+>         ])
+>         .split(area);
+> 
+>     // Title
+>     let title = Paragraph::new("DPRS - Docker Container Manager")
+>         .style(Style::default().fg(Color::Cyan))
+>         .alignment(Alignment::Center);
+>     f.render_widget(title, chunks[0]);
+> 
+>     // Container list
+17,18c34,35
+<             let status_style = if container.status.contains("Up") {
+<                 Style::default().fg(Color::Green)
+---
+>             let status_color = if container.status.contains("Up") {
+>                 Color::Green
+20c37
+<                 Style::default().fg(Color::Red)
+---
+>                 Color::Red
+23,24c40,44
+<             let spans = vec![
+<                 Span::styled(&container.name, Style::default().fg(Color::Yellow)),
+---
+>             let line = Spans::from(vec![
+>                 Span::styled(
+>                     format!("{:<20}", container.name),
+>                     Style::default().fg(Color::Yellow),
+>                 ),
+26c46,49
+<                 Span::styled(&container.image, Style::default().fg(Color::Blue)),
+---
+>                 Span::styled(
+>                     format!("{:<30}", container.image),
+>                     Style::default().fg(Color::Blue),
+>                 ),
+28c51,54
+<                 Span::styled(&container.ip_address, Style::default().fg(Color::Cyan)),
+---
+>                 Span::styled(
+>                     format!("{:<15}", container.ip_address),
+>                     Style::default().fg(Color::Magenta),
+>                 ),
+30c56,59
+<                 Span::styled(&container.ports, Style::default().fg(Color::Magenta)),
+---
+>                 Span::styled(
+>                     format!("{:<20}", container.ports),
+>                     Style::default().fg(Color::Cyan),
+>                 ),
+32,33c61,65
+<                 Span::styled(&container.status, status_style),
+<             ];
+---
+>                 Span::styled(
+>                     container.status.clone(),
+>                     Style::default().fg(status_color),
+>                 ),
+>             ]);
+35c67
+<             ListItem::new(spans)
+---
+>             ListItem::new(line)
+40c72
+<         .block(Block::default().borders(Borders::ALL).title("Docker Containers"))
+---
+>         .block(Block::default().borders(Borders::ALL).title("Containers"))
+43,44c75,76
+<                 .bg(Color::DarkGray)
+<                 .fg(Color::White)
+---
+>                 .bg(Color::LightBlue)
+>                 .fg(Color::Black)
+47c79,81
+<         .highlight_symbol("> ");
+---
+>         .highlight_symbol(">> ");
+> 
+>     f.render_stateful_widget(containers, chunks[1], &mut app_state.list_state);
+49c83,90
+<     f.render_stateful_widget(containers, area, &mut app_state.list_state);
+---
+>     // Help section
+>     let help = Paragraph::new(
+>         "q: Quit | j/↓: Down | k/↑: Up | c: Copy IP | l: Open in Browser | x: Stop Container | r: Reload",
+>     )
+>     .style(Style::default().fg(Color::White))
+>     .block(Block::default().borders(Borders::ALL).title("Help"));
+>     
+>     f.render_widget(help, chunks[2]);

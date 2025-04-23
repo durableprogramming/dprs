@@ -1,0 +1,140 @@
+use crossterm::{
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use std::{io, time::Duration};
+use tui::{
+    backend::{Backend, CrosstermBackend},
+    layout::{Constraint, Direction, Layout},
+    Frame, Terminal,
+};
+
+use dprs::app::{
+    actions::{copy_ip_address, open_browser, stop_container},
+    state_machine::{AppEvent, AppState},
+};
+use dprs::display::{render_container_list, render_hotkey_bar, ToastManager};
+
+mod app;
+mod display;
+
+fn main() -> Result<(), io::Error> {
+    // Setup terminal
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    // Create app state
+    let mut app_state = AppState::new();
+    app_state.load_containers();
+    
+    // Create toast manager
+    let mut toast_manager = ToastManager::new();
+
+    // Main loop
+    let res = run_app(&mut terminal, &mut app_state, &mut toast_manager);
+
+    // Restore terminal
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    if let Err(err) = res {
+        println!("{}", err);
+    }
+
+    Ok(())
+}
+
+fn run_app<B: Backend>(
+    terminal: &mut Terminal<B>,
+    app_state: &mut AppState,
+    toast_manager: &mut ToastManager,
+) -> Result<(), String> {
+    loop {
+        terminal.draw(|f| ui(f, app_state, toast_manager))?;
+
+        toast_manager.check_expired();
+
+        if let Event::Key(key) = event::read().map_err(|e| format!("Error reading event: {}", e))? {
+            let event = match key.code {
+                KeyCode::Char('q') => AppEvent::Quit,
+                KeyCode::Char('j') | KeyCode::Down => AppEvent::Next,
+                KeyCode::Char('k') | KeyCode::Up => AppEvent::Previous,
+                KeyCode::Char('c') => {
+                    if let Err(e) = copy_ip_address(app_state) {
+                        toast_manager.show(&e, 3000);
+                    } else {
+                        toast_manager.show("IP address copied to clipboard", 2000);
+                    }
+                    AppEvent::CopyIP
+                },
+                KeyCode::Char('l') => {
+                    if let Err(e) = open_browser(app_state) {
+                        toast_manager.show(&e, 3000);
+                    } else {
+                        toast_manager.show("Opening in browser", 2000);
+                    }
+                    AppEvent::OpenBrowser
+                },
+                KeyCode::Char('x') => {
+                    if let Err(e) = stop_container(app_state) {
+                        toast_manager.show(&e, 3000);
+                    } else {
+                        toast_manager.show("Container stopped", 2000);
+                    }
+                    AppEvent::StopContainer
+                },
+                KeyCode::Char('r') => {
+                    app_state.load_containers();
+                    toast_manager.show("Containers reloaded", 2000);
+                    AppEvent::Reload
+                },
+                _ => continue,
+            };
+
+            if !app_state.handle_event(event) {
+                break;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn ui<B: Backend>(f: &mut Frame<B>, app_state: &mut AppState, toast_manager: &mut ToastManager) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(1),
+            Constraint::Length(3),
+        ].as_ref())
+        .split(f.size());
+
+    render_container_list(f, app_state, chunks[0]);
+    render_hotkey_bar(f, chunks[1]);
+
+    // Render toast if available
+    if let Some(toast) = toast_manager.get_toast() {
+        let toast_area = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage(90),
+                Constraint::Percentage(10),
+            ].as_ref())
+            .split(f.size())[1];
+        
+        let toast_paragraph = tui::widgets::Paragraph::new(toast.message.as_str())
+            .style(tui::style::Style::default().fg(tui::style::Color::Yellow))
+            .block(tui::widgets::Block::default().borders(tui::widgets::Borders::ALL).title("Notification"));
+        
+        f.render_widget(toast_paragraph, toast_area);
+    }
+}
