@@ -1,13 +1,13 @@
-use tui::{
+use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans},
+    text::{Span,Line},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
-pub fn render_hotkey_bar<B: Backend>(f: &mut Frame<B>, area: Rect) {
+pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect) {
     let help_text = vec![
         Span::styled("q", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
         Span::raw(": Quit | "),
@@ -25,7 +25,7 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame<B>, area: Rect) {
         Span::raw(": Reload"),
     ];
 
-    let help = Paragraph::new(Spans::from(help_text))
+    let help = Paragraph::new(Line::from(help_text))
         .style(Style::default())
         .block(Block::default().borders(Borders::ALL).title("Hotkeys"));
     

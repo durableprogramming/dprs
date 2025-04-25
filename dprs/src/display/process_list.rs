@@ -1,52 +1,58 @@
-use tui::{
+use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans},
-    widgets::{Block, Borders, List, ListItem},
+    text::{Span,Line},
+    widgets::{Block, Borders, List, ListItem, BorderType, Padding},
     Frame,
 };
 
 use crate::app::state_machine::AppState;
 
-pub fn render_container_list<B: Backend>(f: &mut Frame<B>, app_state: &mut AppState, area: Rect) {
+pub fn render_container_list<B: Backend>(f: &mut Frame, app_state: &mut AppState, area: Rect) {
     let containers = &app_state.containers;
 
     let items: Vec<ListItem> = containers
         .iter()
         .map(|c| {
-            let header = Spans::from(vec![
+            let header = Line::from(vec![
                 Span::styled(&c.name, Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
                 Span::raw(" ("),
                 Span::styled(&c.image, Style::default().fg(Color::Yellow)),
                 Span::raw(")"),
             ]);
 
-            let status = Spans::from(vec![
+            let status = Line::from(vec![
                 Span::raw("Status: "),
                 Span::styled(&c.status, Style::default().fg(Color::Cyan)),
             ]);
 
-            let ip = Spans::from(vec![
-                Span::raw("IP: "),
+            let ip = Line::from(vec![
+                Span::raw("IP:     "),
                 Span::styled(&c.ip_address, Style::default().fg(Color::Blue)),
             ]);
 
-            let ports = Spans::from(vec![
-                Span::raw("Ports: "),
+            let ports = Line::from(vec![
+                Span::raw("Ports:  "),
                 Span::styled(&c.ports, Style::default().fg(Color::Magenta)),
             ]);
 
-            ListItem::new(vec![header, status, ip, ports])
+            let blank = Line::from(vec![
+                Span::raw(" ")
+            ]);
+
+            ListItem::new(vec![header, status, ip, ports, blank])
                 .style(Style::default())
         })
         .collect();
 
     let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Docker Containers"))
+        .block(Block::default().borders(Borders::ALL).title("Docker Containers").border_type(BorderType::Rounded).border_style(Style::default().bg(Color::Rgb(15, 32, 48)).fg(Color::Rgb(128,128,255))).style( 
+                Style::new().bg(Color::Rgb(8,8,32))
+                ).padding(Padding::vertical(1)))
         .highlight_style(
             Style::default()
-                .bg(Color::DarkGray)
+                .bg(Color::Rgb(15,32,48))
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol(">> ");

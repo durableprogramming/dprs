@@ -1,110 +1,106 @@
-use std::{io, time::Duration};
-use tui::{
-    backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
-    Terminal,
+use std::{
+    io,
+    time::{Duration, Instant},
+    thread,
 };
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use clipboard::ClipboardContext;
-use clipboard::ClipboardProvider;
+use ratatui::{
+    backend::{Backend, CrosstermBackend},
+    Terminal,
+};
+
+use crate::app::state_machine::{AppState, AppEvent};
+use crate::app::actions::{copy_ip_address, open_browser, stop_container};
+use crate::display::toast::ToastManager;
 
 mod app;
 mod display;
 
-use app::state_machine::AppState;
-use display::{hotkey_bar, process_list, toast::ToastManager};
+fn main() -> Result<(), io::Error>{
 
-fn main() -> Result<(), io::Error> {
-    // Terminal setup
+    let stdout = io::stdout();
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    run_app(&mut terminal);
+
+    Ok(())
+}
+
+
+fn run_app<B: Backend>(
+    terminal: &mut Terminal<B>,
+) -> Result<(), io::Error> {
+    // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // Application state
+    // Create app state
     let mut app_state = AppState::new();
+    app_state.load_containers();
+    
+    // Create toast manager
     let mut toast_manager = ToastManager::new();
 
-    // Load initial data
-    app_state.refresh_containers()?;
-
-    // Main event loop
-    let tick_rate = Duration::from_millis(250);
-    let mut last_tick = std::time::Instant::now();
-
+    // Main loop
+    let mut last_update = Instant::now();
+    let tick_rate = Duration::from_secs(1);
+    
     loop {
-        terminal.draw(|f| {
-            let chunks = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Min(1),
-                    Constraint::Length(3),
-                ].as_ref())
-                .split(f.size());
-
-            // Render container list
-            process_list::render_container_list(f, &mut app_state, chunks[0]);
-            
-            // Render hotkey bar
-            hotkey_bar::render_hotkey_bar(f, chunks[1]);
-            
-            // TODO: Render toast notifications if implemented
-        })?;
-
-        // Check for toast expiration
-        toast_manager.check_expired();
-
-        // Check for events with timeout
+        terminal.draw(|f| display::draw::<B>(f, &mut app_state, &toast_manager))?;
+        
+        // Handle events and timing
         let timeout = tick_rate
-            .checked_sub(last_tick.elapsed())
+            .checked_sub(last_update.elapsed())
             .unwrap_or_else(|| Duration::from_secs(0));
-
+            
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Char('q') => break,
                     KeyCode::Char('j') | KeyCode::Down => app_state.next(),
                     KeyCode::Char('k') | KeyCode::Up => app_state.previous(),
+                    KeyCode::Char('r') => {
+                        app_state.load_containers();
+                        toast_manager.show("Containers reloaded", 2000);
+                    },
                     KeyCode::Char('c') => {
-                        // Copy IP address to clipboard
-                        if let Some(container) = app_state.get_selected_container() {
-                            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-                            ctx.set_contents(container.ip_address.clone()).unwrap();
-                            toast_manager.show("IP address copied to clipboard!", 2000);
+                        match copy_ip_address(&app_state) {
+                            Ok(_) => toast_manager.show("IP address copied to clipboard", 2000),
+                            Err(e) => toast_manager.show(&format!("Error: {}", e), 2000),
                         }
                     },
                     KeyCode::Char('l') => {
-                        // Open in browser
-                        if let Some(container) = app_state.get_selected_container() {
-                            // TODO: Implement browser opening functionality
-                            toast_manager.show(&format!("Opening {} in browser", container.name), 2000);
+                        match open_browser(&app_state) {
+                            Ok(_) => toast_manager.show("Opening in browser", 2000),
+                            Err(e) => toast_manager.show(&format!("Error: {}", e), 2000),
                         }
                     },
                     KeyCode::Char('x') => {
-                        // Stop container
-                        if let Some(container) = app_state.get_selected_container() {
-                            // TODO: Implement container stopping functionality
-                            toast_manager.show(&format!("Stopping container {}", container.name), 2000);
+                        match stop_container(&mut app_state) {
+                            Ok(_) => toast_manager.show("Container stopped", 2000),
+                            Err(e) => toast_manager.show(&format!("Error: {}", e), 2000),
                         }
-                    },
-                    KeyCode::Char('r') => {
-                        // Refresh container list
-                        app_state.refresh_containers()?;
-                        toast_manager.show("Container list refreshed", 2000);
                     },
                     _ => {}
                 }
             }
         }
-
-        if last_tick.elapsed() >= tick_rate {
-            last_tick = std::time::Instant::now();
-            // Perform periodic updates here if needed
+        
+        // Check if we need to update
+        if last_update.elapsed() >= tick_rate {
+            app_state.load_containers();
+            last_update = Instant::now();
+            
+            // Check if toasts have expired
+            toast_manager.check_expired();
         }
     }
 

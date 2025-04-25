@@ -1,8 +1,8 @@
-use tui::{
-    backend::Backend,
+use ratatui::{
+    backend::{CrosstermBackend,Backend},
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::{Span, Spans},
+    text::{Span, Line},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
@@ -16,7 +16,7 @@ pub mod hotkey_bar;
 pub mod process_list;
 pub mod toast;
 
-pub fn draw<B: Backend>(f: &mut Frame<B>, app_state: &mut AppState, toast_manager: &ToastManager) {
+pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: &ToastManager) {
     let size = f.size();
 
     let chunks = Layout::default()
@@ -32,10 +32,10 @@ pub fn draw<B: Backend>(f: &mut Frame<B>, app_state: &mut AppState, toast_manage
         .split(size);
 
     // Render the hotkey bar
-    render_hotkey_bar(f, chunks[0]);
+    render_hotkey_bar::<B>(f, chunks[0]);
 
     // Render container list
-    render_container_list(f, app_state, chunks[1]);
+    render_container_list::<B>(f, app_state, chunks[1]);
 
     // Render toast if available
     if let Some(toast) = toast_manager.get_toast() {
