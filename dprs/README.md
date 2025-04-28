@@ -1,74 +1,75 @@
-# DPRS
+# Docker Process Rust Suite (dprs)
 
-A Rust implementation of Dockerpage to provide a faster, more efficient terminal user interface (TUI) for managing Docker containers.
+A collection of TUI (Terminal User Interface) tools for managing and working with Docker containers, built with Rust.
 
 ## Features
 
-- List all Docker containers with improved performance
-- Display container details including name, image, IP address, and ports
-- Select and interact with containers using keyboard shortcuts
-- Copy container IP address to clipboard
-- Open container web interface in browser
-- Stop selected container
+- **Container Management (dprs)**: List, view details, and manage running Docker containers
+- **Docker Log Watcher (dplw)**: View and monitor logs from multiple Docker containers in real-time
 
 ## Installation
 
-```
-cargo install dprs
-```
-
-Or build from source:
-
-```
-git clone https://github.com/yourusername/dprs
-cd dprs
-cargo build --release
+```bash
+./scripts/install.sh
 ```
 
-## Usage
+## Tools
 
-Run the `dprs` command to launch the TUI:
+### Docker Process Viewer (dprs)
 
+A terminal-based Docker container manager that provides:
+
+- List of all running containers with details (name, image, status, IP, ports)
+- Copy container IP address to clipboard with a single keystroke
+- Open web browser to container IP address
+- Stop containers
+- Refresh container list
+
+#### Usage
+
+```bash
+dprs
 ```
-$ dprs
-```
 
-### Keyboard shortcuts
+#### Keyboard Shortcuts
 
-- `j`: Move selection down
-- `k`: Move selection up
+- `j` / `↓`: Move selection down
+- `k` / `↑`: Move selection up
 - `c`: Copy selected container's IP address to clipboard
-- `l`: Open selected container's web interface in browser
+- `l`: Open selected container's IP address in default web browser
 - `x`: Stop selected container
-- `q`: Quit the application
+- `r`: Reload container list
+- `q`: Quit application
 
-## Why Rust?
+### Docker Process Log Watcher (dplw)
 
-The original Dockerpage was written in Ruby, but this Rust implementation offers:
+A terminal-based log viewer for Docker containers that provides:
 
-- Significantly faster startup times
-- Lower memory usage
-- Native binary with no dependencies
-- Improved performance when handling many containers
+- View logs from all running containers
+- Switch between containers with tabs
+- Scroll through logs
+- Auto-refresh when new log entries are added
 
-## Development
+#### Usage
 
-After checking out the repo, make sure you have the Rust toolchain installed and run:
-
-```
-cargo build
-```
-
-To run the application locally during development:
-
-```
-cargo run
+```bash
+dplw
 ```
 
-## Contributing
+#### Keyboard Shortcuts
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/yourusername/dprs.
+- `←` / `→`: Switch between container tabs
+- `↑` / `↓`: Scroll through logs
+- `Home`: Scroll to top of logs
+- `End`: Scroll to bottom of logs
+- `r`: Refresh container list
+- `q`: Quit application
+
+## Requirements
+
+- Docker installed and running on your system
+- For clipboard functionality: xclip/xsel (Linux), pbcopy/pbpaste (macOS)
 
 ## License
 
-The application is available as open source under the terms of the MIT License.
+MIT

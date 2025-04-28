@@ -1,174 +1,195 @@
-use std::{
-    io::{self, BufRead, BufReader},
-    process::{Command, Stdio},
-    sync::{Arc, Mutex},
-    thread,
-    time::Duration,
-};
+use std::collections::VecDeque;
+use std::io::{BufRead, BufReader, Error, ErrorKind};
+use std::process::{Child, Command, Stdio};
+use std::sync::{Arc, Mutex};
+use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 pub struct DockerLogWatcher {
-    container_id: String,
     container_name: String,
-    log_lines: Arc<Mutex<Vec<String>>>,
+    logs: Arc<Mutex<VecDeque<String>>>,
+    max_logs: usize,
+    handle: Option<JoinHandle<()>>,
     running: Arc<Mutex<bool>>,
 }
 
 impl DockerLogWatcher {
-    pub fn new(container_id: String, container_name: String) -> Self {
+    pub fn new(container_name: String, max_logs: usize) -> Self {
         Self {
-            container_id,
             container_name,
-            log_lines: Arc::new(Mutex::new(Vec::new())),
-            running: Arc::new(Mutex::new(true)),
+            logs: Arc::new(Mutex::new(VecDeque::with_capacity(max_logs))),
+            max_logs,
+            handle: None,
+            running: Arc::new(Mutex::new(false)),
         }
     }
 
-    pub fn start_watching(&self) -> thread::JoinHandle<()> {
-        let container_id = self.container_id.clone();
-        let log_lines = Arc::clone(&self.log_lines);
+    pub fn start(&mut self) -> Result<(), Error> {
+        let container_name = self.container_name.clone();
+        let logs = Arc::clone(&self.logs);
+        let max_logs = self.max_logs;
         let running = Arc::clone(&self.running);
+        
+        // Set running state to true
+        *running.lock().unwrap() = true;
 
-        // Initialize with existing logs
-        Self::load_existing_logs(&container_id, &log_lines);
-
-        // Spawn a thread to watch for new logs
-        thread::spawn(move || {
-            let log_process = match Command::new("docker")
-                .args(["logs", "--follow", "--tail", "0", &container_id])
+        let handle = thread::spawn(move || {
+            let mut cmd = Command::new("docker")
+                .args(["logs", "--follow", "--tail", "100", &container_name])
                 .stdout(Stdio::piped())
-                .spawn() {
-                Ok(process) => process,
-                Err(e) => {
-                    eprintln!("Failed to start log watching: {}", e);
-                    return;
-                }
-            };
+                .stderr(Stdio::piped())
+                .spawn()
+                .expect("Failed to start docker logs command");
 
-            let stdout = match log_process.stdout {
-                Some(stdout) => stdout,
-                None => {
-                    eprintln!("Failed to open stdout from log process");
-                    return;
-                }
-            };
+            let stdout = cmd.stdout.take().expect("Failed to get stdout");
+            let stderr = cmd.stderr.take().expect("Failed to get stderr");
 
-            let reader = BufReader::new(stdout);
-            for line in reader.lines() {
-                if let Ok(line) = line {
-                    // Check if we should stop watching
-                    if !*running.lock().unwrap() {
+            // Combine stdout and stderr into a single reader
+            let stdout_reader = BufReader::new(stdout);
+            let stderr_reader = BufReader::new(stderr);
+
+            // Handle stdout in a separate thread
+            let logs_clone = Arc::clone(&logs);
+            let running_clone = Arc::clone(&running);
+            let stdout_handle = thread::spawn(move || {
+                for line in stdout_reader.lines() {
+                    if !*running_clone.lock().unwrap() {
                         break;
                     }
-
-                    // Add the new line to our log buffer
-                    let mut logs = log_lines.lock().unwrap();
-                    logs.push(line);
+                    
+                    if let Ok(line) = line {
+                        let mut logs = logs_clone.lock().unwrap();
+                        logs.push_back(line);
+                        while logs.len() > max_logs {
+                            logs.pop_front();
+                        }
+                    }
                 }
-            }
-        })
+            });
+
+            // Handle stderr in a separate thread
+            let logs_clone = Arc::clone(&logs);
+            let running_clone = Arc::clone(&running);
+            let stderr_handle = thread::spawn(move || {
+                for line in stderr_reader.lines() {
+                    if !*running_clone.lock().unwrap() {
+                        break;
+                    }
+                    
+                    if let Ok(line) = line {
+                        let mut logs = logs_clone.lock().unwrap();
+                        logs.push_back(format!("ERROR: {}", line));
+                        while logs.len() > max_logs {
+                            logs.pop_front();
+                        }
+                    }
+                }
+            });
+
+            let running_clone = Arc::clone(&running);
+            let watcher = thread::spawn(move || {
+                loop {
+                    if !*running_clone.lock().unwrap() {
+                        cmd.kill();
+                        break;
+                    }
+                    thread::sleep(Duration::from_millis(100));
+                }
+            });
+            // Wait for both readers to complete
+            stdout_handle.join().unwrap();
+            stderr_handle.join().unwrap();
+
+        });
+
+        self.handle = Some(handle);
+        Ok(())
     }
 
-    fn load_existing_logs(container_id: &str, log_lines: &Arc<Mutex<Vec<String>>>) {
-        match Command::new("docker")
-            .args(["logs", "--tail", "100", container_id])
-            .output() {
-            Ok(output) => {
-                let output_str = String::from_utf8_lossy(&output.stdout);
-                let mut logs = log_lines.lock().unwrap();
-                for line in output_str.lines() {
-                    logs.push(line.to_string());
-                }
-            }
-            Err(e) => {
-                eprintln!("Failed to get existing logs: {}", e);
-            }
+    pub fn stop(&mut self) {
+        if let Some(handle) = self.handle.take() {
+            // Set running state to false
+            *self.running.lock().unwrap() = false;
+            
+            // Wait for the thread to finish
+            let _ = handle.join();
         }
-    }
-
-    pub fn stop_watching(&self) {
-        let mut running = self.running.lock().unwrap();
-        *running = false;
     }
 
     pub fn get_logs(&self) -> Vec<String> {
-        let logs = self.log_lines.lock().unwrap();
-        logs.clone()
+        let logs = self.logs.lock().unwrap();
+        logs.iter().cloned().collect()
     }
 
     pub fn container_name(&self) -> &str {
         &self.container_name
     }
-
-    pub fn container_id(&self) -> &str {
-        &self.container_id
-    }
 }
 
 pub struct DockerLogManager {
     watchers: Vec<DockerLogWatcher>,
-    handles: Vec<thread::JoinHandle<()>>,
 }
 
 impl DockerLogManager {
     pub fn new() -> Self {
         Self {
             watchers: Vec::new(),
-            handles: Vec::new(),
         }
     }
 
-    pub fn start_watching_all_containers(&mut self) -> io::Result<()> {
-        // Get all running containers
+    pub fn start_watching_container(&mut self, container_name: String) -> Result<(), Error> {
+        let mut watcher = DockerLogWatcher::new(container_name, 1000);
+        watcher.start()?;
+        self.watchers.push(watcher);
+        Ok(())
+    }
+
+    pub fn start_watching_all_containers(&mut self) -> Result<(), Error> {
+        // Get list of running containers
         let output = Command::new("docker")
-            .args(["ps", "--format", "{{.ID}}|{{.Names}}"])
-            .output()?;
+            .args(["ps", "--format", "{{.Names}}"])
+            .output()
+            .map_err(|e| Error::new(ErrorKind::Other, format!("Failed to execute docker command: {}", e)))?;
+
+        if !output.status.success() {
+            return Err(Error::new(
+                ErrorKind::Other,
+                format!("Docker command failed: {}", String::from_utf8_lossy(&output.stderr)),
+            ));
+        }
 
         let output_str = String::from_utf8_lossy(&output.stdout);
         
-        // Stop any existing watchers
+        // Clear existing watchers
         self.stop_all();
         self.watchers.clear();
-        self.handles.clear();
 
-        // Create new watchers for each container
+        // Start watching each container
         for line in output_str.lines() {
-            let parts: Vec<&str> = line.split('|').collect();
-            if parts.len() == 2 {
-                let container_id = parts[0].to_string();
-                let container_name = parts[1].to_string();
-                
-                let watcher = DockerLogWatcher::new(container_id, container_name);
-                let handle = watcher.start_watching();
-                
-                self.watchers.push(watcher);
-                self.handles.push(handle);
+            let container_name = line.trim().to_string();
+            if !container_name.is_empty() {
+                self.start_watching_container(container_name)?;
             }
         }
 
         Ok(())
     }
 
-    pub fn get_watcher(&self, index: usize) -> Option<&DockerLogWatcher> {
-        self.watchers.get(index)
+    pub fn stop_all(&mut self) {
+        for watcher in &mut self.watchers {
+            watcher.stop();
+        }
     }
 
-    pub fn stop_all(&mut self) {
-        for watcher in &self.watchers {
-            watcher.stop_watching();
-        }
-        
-        // Wait for all threads to finish
-        while let Some(handle) = self.handles.pop() {
-            // Use a timeout to avoid blocking indefinitely
-            let _ = handle.join();
-        }
+    pub fn get_watcher(&self, index: usize) -> Option<&DockerLogWatcher> {
+        self.watchers.get(index)
     }
 
     pub fn watcher_count(&self) -> usize {
         self.watchers.len()
     }
 
-    pub fn refresh(&mut self) -> io::Result<()> {
+    pub fn refresh(&mut self) -> Result<(), Error> {
         self.start_watching_all_containers()
     }
 }
