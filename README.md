@@ -1,74 +1,78 @@
-# Docker Process Rust Suite (dprs)
+# DPRS - Docker Process Management TUI
 
-A collection of TUI (Terminal User Interface) tools for managing and working with Docker containers, built with Rust.
+DPRS is a terminal user interface (TUI) application for managing Docker containers. It provides two main tools:
+
+1. **dprs** - Docker container management tool
+2. **dplw** - Docker log watching tool
 
 ## Features
 
-- **Container Management (dprs)**: List, view details, and manage running Docker containers
-- **Docker Log Watcher (dplw)**: View and monitor logs from multiple Docker containers in real-time
+### DPRS (Docker Process Manager)
+- List all running Docker containers with details
+- View container information (name, image, status, IP address, ports)
+- Copy container IP address to clipboard
+- Open container web interface in browser
+- Stop containers
+- Refresh container list
+
+### DPLW (Docker Log Watcher)
+- Watch logs from all running containers in real-time
+- Switch between containers easily
+- Scroll through container logs
+- Refresh container list
+
+## Requirements
+
+- Rust and Cargo
+- Docker
 
 ## Installation
 
 ```bash
+git clone https://github.com/yourusername/dprs.git
+cd dprs
 ./scripts/install.sh
 ```
 
-## Tools
+The install script will:
+1. Check if Cargo and Docker are installed
+2. Build the application in release mode
+3. Copy the binaries to `~/.local/bin/`
 
-### Docker Process Viewer (dprs)
+## Usage
 
-A terminal-based Docker container manager that provides:
+### DPRS - Docker Process Manager
 
-- List of all running containers with details (name, image, status, IP, ports)
-- Copy container IP address to clipboard with a single keystroke
-- Open web browser to container IP address
-- Stop containers
-- Refresh container list
-
-#### Usage
+Run the application:
 
 ```bash
 dprs
 ```
 
-#### Keyboard Shortcuts
+Controls:
+- `j`/`↓` - Move selection down
+- `k`/`↑` - Move selection up
+- `c` - Copy container IP address to clipboard
+- `l` - Open container web interface in browser
+- `x` - Stop the selected container
+- `r` - Refresh container list
+- `q` - Quit
 
-- `j` / `↓`: Move selection down
-- `k` / `↑`: Move selection up
-- `c`: Copy selected container's IP address to clipboard
-- `l`: Open selected container's IP address in default web browser
-- `x`: Stop selected container
-- `r`: Reload container list
-- `q`: Quit application
+### DPLW - Docker Log Watcher
 
-### Docker Process Log Watcher (dplw)
-
-A terminal-based log viewer for Docker containers that provides:
-
-- View logs from all running containers
-- Switch between containers with tabs
-- Scroll through logs
-- Auto-refresh when new log entries are added
-
-#### Usage
+Run the application:
 
 ```bash
 dplw
 ```
 
-#### Keyboard Shortcuts
-
-- `←` / `→`: Switch between container tabs
-- `↑` / `↓`: Scroll through logs
-- `Home`: Scroll to top of logs
-- `End`: Scroll to bottom of logs
-- `r`: Refresh container list
-- `q`: Quit application
-
-## Requirements
-
-- Docker installed and running on your system
-- For clipboard functionality: xclip/xsel (Linux), pbcopy/pbpaste (macOS)
+Controls:
+- `←`/`→` - Switch between containers
+- `↑`/`↓` - Scroll logs
+- `Home` - Scroll to top
+- `End` - Scroll to bottom
+- `r` - Refresh container list
+- `q` - Quit
 
 ## License
 
