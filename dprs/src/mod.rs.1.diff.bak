@@ -1,0 +1,11 @@
+3d2
+< mod docker_log_watcher;
+5,8c4,6
+< pub use app::state_machine::{AppState, AppEvent, Container};
+< pub use app::actions::{copy_ip_address, open_browser, stop_container};
+< pub use display::toast::ToastManager;
+< pub use docker_log_watcher::{DockerLogManager, DockerLogWatcher};
+---
+> use app::state_machine::{AppState, AppEvent};
+> use app::actions::{copy_ip_address, open_browser, stop_container};
+> use display::{render_container_list, render_hotkey_bar, ToastManager};

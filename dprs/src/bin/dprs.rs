@@ -1,24 +1,19 @@
-use std::{
-    io,
-    time::{Duration, Instant},
-    thread,
-};
+use std::{io, time::Duration, io::stdout};
+use std::error::Error;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
-    execute,
+    event::{self, Event, KeyCode},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    ExecutableCommand,
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
 };
 
-use crate::app::state_machine::{AppState, AppEvent};
-use crate::app::actions::{copy_ip_address, open_browser, stop_container};
-use crate::display::toast::ToastManager;
-
-mod app;
-mod display;
+use dprs::app::state_machine::{AppState, AppEvent};
+use dprs::app::actions::{copy_ip_address, open_browser, stop_container};
+use dprs::display::toast::ToastManager;
+use dprs::display;
 
 fn main() -> Result<(), io::Error>{
 
@@ -35,42 +30,35 @@ fn main() -> Result<(), io::Error>{
 fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
 ) -> Result<(), io::Error> {
+
     // Setup terminal
     enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
+    stdout().execute(EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
-    // Create app state
+    // App state
     let mut app_state = AppState::new();
     app_state.load_containers();
     
-    // Create toast manager
+    // Toast notification manager
     let mut toast_manager = ToastManager::new();
 
-    // Main loop
-    let mut last_update = Instant::now();
-    let tick_rate = Duration::from_secs(1);
-    
+    // Main event loop
     loop {
+        // Draw the UI
         terminal.draw(|f| display::draw::<B>(f, &mut app_state, &toast_manager))?;
         
-        // Handle events and timing
-        let timeout = tick_rate
-            .checked_sub(last_update.elapsed())
-            .unwrap_or_else(|| Duration::from_secs(0));
-            
-        if crossterm::event::poll(timeout)? {
+        // Check if toast has expired
+        toast_manager.check_expired();
+
+        // Handle input
+        if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Char('q') => break,
                     KeyCode::Char('j') | KeyCode::Down => app_state.next(),
                     KeyCode::Char('k') | KeyCode::Up => app_state.previous(),
-                    KeyCode::Char('r') => {
-                        app_state.load_containers();
-                        toast_manager.show("Containers reloaded", 2000);
-                    },
                     KeyCode::Char('c') => {
                         match copy_ip_address(&app_state) {
                             Ok(_) => toast_manager.show("IP address copied to clipboard", 2000),
@@ -89,29 +77,19 @@ fn run_app<B: Backend>(
                             Err(e) => toast_manager.show(&format!("Error: {}", e), 2000),
                         }
                     },
+                    KeyCode::Char('r') => {
+                        app_state.load_containers();
+                        toast_manager.show("Containers reloaded", 1000);
+                    },
                     _ => {}
                 }
             }
         }
-        
-        // Check if we need to update
-        if last_update.elapsed() >= tick_rate {
-            app_state.load_containers();
-            last_update = Instant::now();
-            
-            // Check if toasts have expired
-            toast_manager.check_expired();
-        }
     }
 
-    // Restore terminal
+    // Cleanup terminal
     disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-
+    stdout().execute(LeaveAlternateScreen)?;
+    
     Ok(())
 }

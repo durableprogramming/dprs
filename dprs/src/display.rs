@@ -15,6 +15,7 @@ use crate::display::toast::ToastManager;
 pub mod hotkey_bar;
 pub mod process_list;
 pub mod toast;
+pub mod log_tabs;
 
 pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: &ToastManager) {
     let size = f.size();
