@@ -1,5 +1,4 @@
 use std::{io, time::Duration, io::stdout};
-use std::error::Error;
 use crossterm::{
     event::{self, Event, KeyCode},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -7,14 +6,14 @@ use crossterm::{
 };
 use ratatui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Line},
-    widgets::{Block, Borders, Paragraph, Wrap},
+    widgets::{Block, Borders, Paragraph},
     Terminal,
 };
 
-use dprs::docker_log_watcher::{DockerLogManager, DockerLogWatcher};
+use dprs::docker_log_watcher::DockerLogManager;
 use dprs::display::log_tabs::{LogTabs, render_log_tabs};
 use dprs::log_view::{LogView, LogLevel, render_log_view};
 
