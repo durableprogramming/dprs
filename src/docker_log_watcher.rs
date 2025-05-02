@@ -220,4 +220,165 @@ impl Drop for DockerLogManager {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+    use std::thread;
+
+    #[test]
+    fn test_docker_log_watcher_new() {
+        let watcher = DockerLogWatcher::new("test-container".to_string(), 100);
+        assert_eq!(watcher.container_name(), "test-container");
+        assert_eq!(watcher.get_logs().len(), 0);
+    }
+
+    #[test]
+    fn test_docker_log_manager_new() {
+        let manager = DockerLogManager::new();
+        assert_eq!(manager.watcher_count(), 0);
+    }
+
+    #[test]
+    fn test_docker_log_manager_default() {
+        let manager = DockerLogManager::default();
+        assert_eq!(manager.watcher_count(), 0);
+    }
+
+    #[cfg(feature = "integration_tests")]
+    mod integration {
+        use super::*;
+
+        fn setup_test_container() -> Result<String, std::io::Error> {
+            let container_name = format!("test-container-{}", std::process::id());
+            Command::new("docker")
+                .args(["run", "-d", "--name", &container_name, "alpine", "sh", "-c", "while true; do echo hello world; sleep 1; done"])
+                .output()?;
+            
+            Ok(container_name)
+        }
+
+        fn cleanup_test_container(container_name: &str) {
+            let _ = Command::new("docker")
+                .args(["rm", "-f", container_name])
+                .output();
+        }
+
+        #[test]
+        fn test_docker_log_watcher_start_stop() -> Result<(), std::io::Error> {
+            let container_name = setup_test_container()?;
+            
+            let mut watcher = DockerLogWatcher::new(container_name.clone(), 100);
+            watcher.start()?;
+            
+            // Wait for some logs to appear
+            thread::sleep(Duration::from_secs(2));
+            
+            let logs = watcher.get_logs();
+            assert!(!logs.is_empty(), "Should have collected some logs");
+            assert!(logs.iter().any(|log| log.contains("hello world")));
+            
+            watcher.stop();
+            
+            let log_count = watcher.get_logs().len();
+            thread::sleep(Duration::from_secs(2));
+            
+            // Log count should remain the same after stopping
+            assert_eq!(watcher.get_logs().len(), log_count);
+            
+            cleanup_test_container(&container_name);
+            Ok(())
+        }
+
+        #[test]
+        fn test_docker_log_manager_start_watching_container() -> Result<(), std::io::Error> {
+            let container_name = setup_test_container()?;
+            
+            let mut manager = DockerLogManager::new();
+            manager.start_watching_container(container_name.clone())?;
+            
+            assert_eq!(manager.watcher_count(), 1);
+            
+            // Wait for logs to appear
+            thread::sleep(Duration::from_secs(2));
+            
+            let watcher = manager.get_watcher(0).unwrap();
+            let logs = watcher.get_logs();
+            assert!(!logs.is_empty(), "Should have collected some logs");
+            
+            cleanup_test_container(&container_name);
+            Ok(())
+        }
+
+        #[test]
+        fn test_docker_log_manager_start_watching_all() -> Result<(), std::io::Error> {
+            let container_name1 = setup_test_container()?;
+            let container_name2 = {
+                let name = format!("test-container-2-{}", std::process::id());
+                Command::new("docker")
+                    .args(["run", "-d", "--name", &name, "alpine", "sh", "-c", "while true; do echo container 2; sleep 1; done"])
+                    .output()?;
+                name
+            };
+            
+            let mut manager = DockerLogManager::new();
+            manager.start_watching_all_containers()?;
+            
+            assert!(manager.watcher_count() >= 2, "Should be watching at least our two test containers");
+            
+            // Wait for logs to appear
+            thread::sleep(Duration::from_secs(2));
+            
+            // Find our test containers in the watchers
+            let mut found_container1 = false;
+            let mut found_container2 = false;
+            
+            for i in 0..manager.watcher_count() {
+                let watcher = manager.get_watcher(i).unwrap();
+                if watcher.container_name() == container_name1 {
+                    found_container1 = true;
+                    assert!(!watcher.get_logs().is_empty());
+                } else if watcher.container_name() == container_name2 {
+                    found_container2 = true;
+                    assert!(!watcher.get_logs().is_empty());
+                }
+            }
+            
+            assert!(found_container1, "Should find container1 in watchers");
+            assert!(found_container2, "Should find container2 in watchers");
+            
+            cleanup_test_container(&container_name1);
+            cleanup_test_container(&container_name2);
+            Ok(())
+        }
+
+        #[test]
+        fn test_docker_log_manager_refresh() -> Result<(), std::io::Error> {
+            let container_name = setup_test_container()?;
+            
+            let mut manager = DockerLogManager::new();
+            manager.start_watching_all_containers()?;
+            
+            let initial_count = manager.watcher_count();
+            
+            // Start another container
+            let container_name2 = {
+                let name = format!("test-container-refresh-{}", std::process::id());
+                Command::new("docker")
+                    .args(["run", "-d", "--name", &name, "alpine", "sh", "-c", "while true; do echo refresh test; sleep 1; done"])
+                    .output()?;
+                name
+            };
+            
+            // Refresh the manager
+            manager.refresh()?;
+            
+            assert!(manager.watcher_count() > initial_count, "Should have more watchers after refreshing");
+            
+            cleanup_test_container(&container_name);
+            cleanup_test_container(&container_name2);
+            Ok(())
+        }
+    }
+}
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.
