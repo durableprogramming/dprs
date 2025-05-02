@@ -1,3 +1,10 @@
+// /**
+// * Implements browser functionality to open Docker container web interfaces.
+// * This module contains a function to open the selected container's IP address
+// * in the default system browser using platform-specific commands, allowing
+// * users to quickly access container web interfaces.
+// */
+
 use std::process::Command;
 use crate::app::state_machine::AppState;
 
@@ -24,3 +31,5 @@ pub fn open_browser(app_state: &AppState) -> Result<(), String> {
     
     Ok(())
 }
+
+// Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

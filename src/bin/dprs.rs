@@ -1,3 +1,9 @@
+// The dprs (Docker Process Manager) binary provides a terminal user interface
+// for managing Docker containers. It implements functionality to list running
+// containers, view container details, copy IP addresses, open web interfaces
+// in a browser, stop containers, and refresh the container list. This file
+// contains the main application loop, event handling, and UI rendering code.
+
 use std::{io, time::Duration, io::stdout};
 use crossterm::{
     event::{self, Event, KeyCode},
@@ -90,3 +96,5 @@ fn run_app<B: Backend>(
     
     Ok(())
 }
+
+// Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

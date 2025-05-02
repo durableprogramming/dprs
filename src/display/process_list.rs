@@ -1,3 +1,9 @@
+// The process_list module implements the core UI component for displaying Docker container information
+// in a styled list format. It renders each container with details including name, image, status,
+// IP address, and port mappings. The module formats this information with appropriate colors and
+// styling to enhance readability, while also handling the selection state to highlight the currently
+// selected container. This component forms the main interactive area of the Docker Process Manager.
+
 use ratatui::{
     backend::Backend,
     layout::Rect,
@@ -59,3 +65,5 @@ pub fn render_container_list<B: Backend>(f: &mut Frame, app_state: &mut AppState
 
     f.render_stateful_widget(list, area, &mut app_state.list_state);
 }
+
+// Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

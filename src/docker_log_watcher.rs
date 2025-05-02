@@ -1,3 +1,12 @@
+// The docker_log_watcher module implements real-time Docker container log monitoring.
+// It provides two main components:
+// - DockerLogWatcher: handles log collection for a single container by spawning
+// background threads that execute "docker logs" commands and capture output
+// - DockerLogManager: coordinates multiple watchers and provides container discovery
+// The module supports starting/stopping log collection, retrieving collected logs,
+// and refreshing the container list. It ensures proper resource cleanup with thread
+// management and implements graceful shutdown through Drop trait implementation.
+
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader, Error, ErrorKind};
 use std::process::{Command, Stdio};
@@ -205,3 +214,5 @@ impl Drop for DockerLogManager {
         self.stop_all();
     }
 }
+
+// Copyright (c) 2025 Durable Programming, LLC. All rights reserved.
