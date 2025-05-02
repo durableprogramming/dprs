@@ -4,9 +4,9 @@
 // The implementation includes methods to navigate container lists, select containers, and refresh
 // container data by querying the Docker CLI. This serves as the central data model for the application.
 
+use ratatui::widgets::ListState;
 use std::io::{Error, ErrorKind};
 use std::process::Command;
-use ratatui::widgets::ListState;
 
 pub struct Container {
     pub name: String,
@@ -41,7 +41,7 @@ impl AppState {
     pub fn new() -> Self {
         let mut list_state = ListState::default();
         list_state.select(Some(0));
-        
+
         Self {
             containers: Vec::new(),
             list_state,
@@ -85,21 +85,33 @@ impl AppState {
 
     pub fn refresh_containers(&mut self) -> Result<(), Error> {
         self.containers.clear();
-        
+
         let output = Command::new("docker")
-            .args(["ps", "--format", "{{.Names}}|{{.Image}}|{{.Status}}|{{.Ports}}"])
+            .args([
+                "ps",
+                "--format",
+                "{{.Names}}|{{.Image}}|{{.Status}}|{{.Ports}}",
+            ])
             .output()
-            .map_err(|e| Error::new(ErrorKind::Other, format!("Failed to execute docker command: {}", e)))?;
-        
+            .map_err(|e| {
+                Error::new(
+                    ErrorKind::Other,
+                    format!("Failed to execute docker command: {}", e),
+                )
+            })?;
+
         if !output.status.success() {
             return Err(Error::new(
                 ErrorKind::Other,
-                format!("Docker command failed: {}", String::from_utf8_lossy(&output.stderr)),
+                format!(
+                    "Docker command failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ),
             ));
         }
-        
+
         let output_str = String::from_utf8_lossy(&output.stdout);
-        
+
         for line in output_str.lines() {
             let parts: Vec<&str> = line.split('|').collect();
             if parts.len() >= 4 {
@@ -107,15 +119,27 @@ impl AppState {
                 let image = parts[1].to_string();
                 let status = parts[2].to_string();
                 let ports = parts[3].to_string();
-                
+
                 // Get container IP address
                 let ip_output = Command::new("docker")
-                    .args(["inspect", "--format", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", &name])
+                    .args([
+                        "inspect",
+                        "--format",
+                        "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+                        &name,
+                    ])
                     .output()
-                    .map_err(|e| Error::new(ErrorKind::Other, format!("Failed to get container IP: {}", e)))?;
-                
-                let ip_address = String::from_utf8_lossy(&ip_output.stdout).trim().to_string();
-                
+                    .map_err(|e| {
+                        Error::new(
+                            ErrorKind::Other,
+                            format!("Failed to get container IP: {}", e),
+                        )
+                    })?;
+
+                let ip_address = String::from_utf8_lossy(&ip_output.stdout)
+                    .trim()
+                    .to_string();
+
                 self.containers.push(Container {
                     name,
                     image,
@@ -125,17 +149,19 @@ impl AppState {
                 });
             }
         }
-        
+
         // Reset selection if the list is empty or the current selection is invalid
         if self.containers.is_empty() {
             self.list_state.select(None);
-        } else if self.list_state.selected().is_none() || self.list_state.selected().unwrap() >= self.containers.len() {
+        } else if self.list_state.selected().is_none()
+            || self.list_state.selected().unwrap() >= self.containers.len()
+        {
             self.list_state.select(Some(0));
         }
-        
+
         Ok(())
     }
-    
+
     pub fn load_containers(&mut self) {
         let _ = self.refresh_containers();
     }

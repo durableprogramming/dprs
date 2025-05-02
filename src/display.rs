@@ -21,9 +21,9 @@ use crate::display::process_list::render_container_list;
 use crate::display::toast::ToastManager;
 
 pub mod hotkey_bar;
+pub mod log_tabs;
 pub mod process_list;
 pub mod toast;
-pub mod log_tabs;
 
 pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: &ToastManager) {
     let size = f.area();
@@ -32,9 +32,9 @@ pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: 
         .direction(Direction::Vertical)
         .constraints(
             [
-                Constraint::Length(3),  // Hotkey bar at top
-                Constraint::Min(1),     // Main container list
-                Constraint::Length(3),  // Toast notification (shown conditionally)
+                Constraint::Length(3), // Hotkey bar at top
+                Constraint::Min(1),    // Main container list
+                Constraint::Length(3), // Toast notification (shown conditionally)
             ]
             .as_ref(),
         )
@@ -51,7 +51,7 @@ pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: 
         let toast_widget = Paragraph::new(toast.message.clone())
             .style(Style::default().fg(Color::White).bg(Color::Blue))
             .block(Block::default().borders(Borders::ALL).title("Notification"));
-        
+
         f.render_widget(toast_widget, chunks[2]);
     }
 }

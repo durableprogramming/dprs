@@ -10,7 +10,7 @@ use ratatui::{
     backend::Backend,
     layout::Rect,
     style::{Color, Style},
-    text::{Span, Line},
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Wrap},
     Frame,
 };
@@ -54,12 +54,12 @@ impl LogView {
         };
 
         self.logs.push_back(log_entry);
-        
+
         // Trim logs if we exceed max capacity
         if self.logs.len() > self.max_logs {
             self.logs.pop_front();
         }
-        
+
         // Auto-scroll to bottom when new logs come in
         self.scroll_to_bottom();
     }
@@ -75,19 +75,23 @@ impl LogView {
             self.scroll_position += 1;
         }
     }
-    
+
     pub fn scroll_to_bottom(&mut self) {
         self.scroll_position = self.logs.len().saturating_sub(1);
     }
-    
+
     pub fn scroll_to_top(&mut self) {
         self.scroll_position = 0;
+    }
+
+    pub fn get_scroll_position(&mut self) -> usize {
+        return self.scroll_position;
     }
 }
 
 pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &LogView, area: Rect) {
     let logs = &log_view.logs;
-    
+
     let log_lines: Vec<Line> = logs
         .iter()
         .map(|entry| {
@@ -97,25 +101,27 @@ pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &LogView, area: Rect
                 LogLevel::Error => Style::default().fg(Color::Red),
                 LogLevel::Debug => Style::default().fg(Color::Blue),
             };
-            
+
             Line::from(Span::styled(&entry.message, style))
         })
         .collect();
-    
+
     let current_position = if logs.is_empty() {
         "No logs".to_string()
     } else {
         format!("{}/{}", log_view.scroll_position + 1, logs.len())
     };
-    
+
     let log_widget = Paragraph::new(log_lines)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .title(format!("Logs ({})", current_position)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!("Logs ({})", current_position)),
+        )
         .style(Style::default())
         .wrap(Wrap { trim: false })
         .scroll((log_view.scroll_position as u16, 0));
-        
+
     f.render_widget(log_widget, area);
 }
 

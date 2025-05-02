@@ -38,7 +38,7 @@ impl DockerLogWatcher {
         let logs = Arc::clone(&self.logs);
         let max_logs = self.max_logs;
         let running = Arc::clone(&self.running);
-        
+
         // Set running state to true
         *running.lock().unwrap() = true;
 
@@ -65,7 +65,7 @@ impl DockerLogWatcher {
                     if !*running_clone.lock().unwrap() {
                         break;
                     }
-                    
+
                     if let Ok(line) = line {
                         let mut logs = logs_clone.lock().unwrap();
                         logs.push_back(line);
@@ -84,7 +84,7 @@ impl DockerLogWatcher {
                     if !*running_clone.lock().unwrap() {
                         break;
                     }
-                    
+
                     if let Ok(line) = line {
                         let mut logs = logs_clone.lock().unwrap();
                         logs.push_back(format!("ERROR: {}", line));
@@ -96,19 +96,16 @@ impl DockerLogWatcher {
             });
 
             let running_clone = Arc::clone(&running);
-            let _watcher = thread::spawn(move || {
-                loop {
-                    if !*running_clone.lock().unwrap() {
-                        let _ = cmd.kill();
-                        break;
-                    }
-                    thread::sleep(Duration::from_millis(100));
+            let _watcher = thread::spawn(move || loop {
+                if !*running_clone.lock().unwrap() {
+                    let _ = cmd.kill();
+                    break;
                 }
+                thread::sleep(Duration::from_millis(100));
             });
             // Wait for both readers to complete
             stdout_handle.join().unwrap();
             stderr_handle.join().unwrap();
-
         });
 
         self.handle = Some(handle);
@@ -119,7 +116,7 @@ impl DockerLogWatcher {
         if let Some(handle) = self.handle.take() {
             // Set running state to false
             *self.running.lock().unwrap() = false;
-            
+
             // Wait for the thread to finish
             let _ = handle.join();
         }
@@ -164,17 +161,25 @@ impl DockerLogManager {
         let output = Command::new("docker")
             .args(["ps", "--format", "{{.Names}}"])
             .output()
-            .map_err(|e| Error::new(ErrorKind::Other, format!("Failed to execute docker command: {}", e)))?;
+            .map_err(|e| {
+                Error::new(
+                    ErrorKind::Other,
+                    format!("Failed to execute docker command: {}", e),
+                )
+            })?;
 
         if !output.status.success() {
             return Err(Error::new(
                 ErrorKind::Other,
-                format!("Docker command failed: {}", String::from_utf8_lossy(&output.stderr)),
+                format!(
+                    "Docker command failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ),
             ));
         }
 
         let output_str = String::from_utf8_lossy(&output.stdout);
-        
+
         // Clear existing watchers
         self.stop_all();
         self.watchers.clear();

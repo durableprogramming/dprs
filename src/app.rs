@@ -5,6 +5,6 @@
 pub mod actions;
 pub mod state_machine;
 
-pub use state_machine::{AppState, AppEvent, Container};
+pub use state_machine::{AppEvent, AppState, Container};
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

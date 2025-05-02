@@ -8,8 +8,8 @@ use ratatui::{
     backend::Backend,
     layout::Rect,
     style::{Color, Modifier, Style},
-    text::{Span,Line},
-    widgets::{Block, Borders, List, ListItem, BorderType, Padding},
+    text::{Line, Span},
+    widgets::{Block, BorderType, Borders, List, ListItem, Padding},
     Frame,
 };
 
@@ -22,7 +22,12 @@ pub fn render_container_list<B: Backend>(f: &mut Frame, app_state: &mut AppState
         .iter()
         .map(|c| {
             let header = Line::from(vec![
-                Span::styled(&c.name, Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    &c.name,
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
+                ),
                 Span::raw(" ("),
                 Span::styled(&c.image, Style::default().fg(Color::Yellow)),
                 Span::raw(")"),
@@ -43,22 +48,29 @@ pub fn render_container_list<B: Backend>(f: &mut Frame, app_state: &mut AppState
                 Span::styled(&c.ports, Style::default().fg(Color::Magenta)),
             ]);
 
-            let blank = Line::from(vec![
-                Span::raw(" ")
-            ]);
+            let blank = Line::from(vec![Span::raw(" ")]);
 
-            ListItem::new(vec![header, status, ip, ports, blank])
-                .style(Style::default())
+            ListItem::new(vec![header, status, ip, ports, blank]).style(Style::default())
         })
         .collect();
 
     let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Docker Containers").border_type(BorderType::Rounded).border_style(Style::default().bg(Color::Rgb(15, 32, 48)).fg(Color::Rgb(128,128,255))).style( 
-                Style::new().bg(Color::Rgb(8,8,32))
-                ).padding(Padding::vertical(1)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Docker Containers")
+                .border_type(BorderType::Rounded)
+                .border_style(
+                    Style::default()
+                        .bg(Color::Rgb(15, 32, 48))
+                        .fg(Color::Rgb(128, 128, 255)),
+                )
+                .style(Style::new().bg(Color::Rgb(8, 8, 32)))
+                .padding(Padding::vertical(1)),
+        )
         .highlight_style(
             Style::default()
-                .bg(Color::Rgb(15,32,48))
+                .bg(Color::Rgb(15, 32, 48))
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol(">> ");

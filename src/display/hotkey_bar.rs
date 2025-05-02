@@ -8,33 +8,66 @@ use ratatui::{
     backend::Backend,
     layout::Rect,
     style::{Color, Modifier, Style},
-    text::{Span,Line},
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
 
 pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect) {
     let help_text = vec![
-        Span::styled("q", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "q",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ),
         Span::raw(": Quit | "),
-        Span::styled("j/↓", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "j/↓",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(": Down | "),
-        Span::styled("k/↑", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "k/↑",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(": Up | "),
-        Span::styled("c", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "c",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(": Copy IP | "),
-        Span::styled("l", Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "l",
+            Style::default()
+                .fg(Color::Blue)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(": Open in Browser | "),
-        Span::styled("x", Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "x",
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(": Stop Container | "),
-        Span::styled("r", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "r",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::raw(": Reload"),
     ];
 
     let help = Paragraph::new(Line::from(help_text))
         .style(Style::default())
         .block(Block::default().borders(Borders::ALL).title("Hotkeys"));
-    
+
     f.render_widget(help, area);
 }
 

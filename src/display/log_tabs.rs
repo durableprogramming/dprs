@@ -8,8 +8,8 @@ use ratatui::{
     backend::Backend,
     layout::Rect,
     style::{Color, Modifier, Style},
-    text::{Span, Line},
-    widgets::{Block, Borders, Tabs, BorderType},
+    text::{Line, Span},
+    widgets::{Block, BorderType, Borders, Tabs},
     Frame,
 };
 
@@ -20,10 +20,7 @@ pub struct LogTabs {
 
 impl LogTabs {
     pub fn new(titles: Vec<String>) -> Self {
-        Self {
-            titles,
-            index: 0,
-        }
+        Self { titles, index: 0 }
     }
 
     pub fn next(&mut self) {
@@ -53,16 +50,16 @@ pub fn render_log_tabs<B: Backend>(f: &mut Frame, log_tabs: &LogTabs, area: Rect
     let titles: Vec<Line> = log_tabs
         .titles
         .iter()
-        .map(|t| {
-            Line::from(vec![Span::styled(
-                t,
-                Style::default().fg(Color::White),
-            )])
-        })
+        .map(|t| Line::from(vec![Span::styled(t, Style::default().fg(Color::White))]))
         .collect();
 
     let tabs = Tabs::new(titles)
-        .block(Block::default().borders(Borders::ALL).title("Containers").border_type(BorderType::Rounded))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Containers")
+                .border_type(BorderType::Rounded),
+        )
         .select(log_tabs.index)
         .style(Style::default().fg(Color::White))
         .highlight_style(
