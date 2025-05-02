@@ -71,4 +71,81 @@ pub fn render_log_tabs<B: Backend>(f: &mut Frame, log_tabs: &LogTabs, area: Rect
     f.render_widget(tabs, area);
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_log_tabs_new() {
+        let titles = vec!["container1".to_string(), "container2".to_string()];
+        let tabs = LogTabs::new(titles.clone());
+        
+        assert_eq!(tabs.titles, titles);
+        assert_eq!(tabs.index, 0);
+    }
+
+    #[test]
+    fn test_log_tabs_next() {
+        let titles = vec!["container1".to_string(), "container2".to_string(), "container3".to_string()];
+        let mut tabs = LogTabs::new(titles);
+        
+        assert_eq!(tabs.index, 0);
+        
+        tabs.next();
+        assert_eq!(tabs.index, 1);
+        
+        tabs.next();
+        assert_eq!(tabs.index, 2);
+        
+        tabs.next();
+        assert_eq!(tabs.index, 0); // Should wrap around
+    }
+
+    #[test]
+    fn test_log_tabs_previous() {
+        let titles = vec!["container1".to_string(), "container2".to_string(), "container3".to_string()];
+        let mut tabs = LogTabs::new(titles);
+        
+        assert_eq!(tabs.index, 0);
+        
+        tabs.previous();
+        assert_eq!(tabs.index, 2); // Should wrap to end
+        
+        tabs.previous();
+        assert_eq!(tabs.index, 1);
+        
+        tabs.previous();
+        assert_eq!(tabs.index, 0);
+    }
+
+    #[test]
+    fn test_set_index() {
+        let titles = vec!["container1".to_string(), "container2".to_string()];
+        let mut tabs = LogTabs::new(titles);
+        
+        assert_eq!(tabs.index, 0);
+        
+        tabs.set_index(1);
+        assert_eq!(tabs.index, 1);
+        
+        // Test setting index out of bounds - should not change
+        tabs.set_index(5);
+        assert_eq!(tabs.index, 1);
+    }
+
+    #[test]
+    fn test_get_active_tab_name() {
+        let titles = vec!["container1".to_string(), "container2".to_string()];
+        let mut tabs = LogTabs::new(titles);
+        
+        assert_eq!(tabs.get_active_tab_name(), Some(&"container1".to_string()));
+        
+        tabs.next();
+        assert_eq!(tabs.get_active_tab_name(), Some(&"container2".to_string()));
+        
+        // Test with empty titles
+        let empty_tabs = LogTabs::new(vec![]);
+        assert_eq!(empty_tabs.get_active_tab_name(), None);
+    }
+}
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

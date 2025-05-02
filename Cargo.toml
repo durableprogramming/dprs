@@ -9,3 +9,6 @@ crossterm = "0.29.0"
 mockall = "0.13.1"
 ratatui = { version = "0.29.0", features=["macros"]}
 
+[dev-dependencies]
+insta = "1.43.1"
+

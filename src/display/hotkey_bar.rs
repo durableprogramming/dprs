@@ -71,4 +71,7 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect) {
     f.render_widget(help, area);
 }
 
+#[cfg(test)]
+mod tests;
+
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

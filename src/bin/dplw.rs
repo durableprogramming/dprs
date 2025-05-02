@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn test_log_manager_refresh() {
-        let mut log_manager = DockerLogManager::new();
+        let _log_manager = DockerLogManager::new();
 
         // Mock implementation for testing
         struct MockLogManager {

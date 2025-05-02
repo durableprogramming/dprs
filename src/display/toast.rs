@@ -62,5 +62,7 @@ impl ToastManager {
         self.toast.as_ref()
     }
 }
+#[cfg(test)]
+mod tests;
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

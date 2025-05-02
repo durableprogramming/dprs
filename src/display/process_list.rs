@@ -10,7 +10,7 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, List, ListItem, Padding},
-    Frame,
+    Frame
 };
 
 use crate::app::state_machine::AppState;
@@ -77,5 +77,8 @@ pub fn render_container_list<B: Backend>(f: &mut Frame, app_state: &mut AppState
 
     f.render_stateful_widget(list, area, &mut app_state.list_state);
 }
+
+#[cfg(test)]
+mod tests;
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.
