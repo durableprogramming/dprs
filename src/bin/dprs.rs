@@ -1,5 +1,4 @@
 use std::{io, time::Duration, io::stdout};
-use std::error::Error;
 use crossterm::{
     event::{self, Event, KeyCode},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -10,7 +9,7 @@ use ratatui::{
     Terminal,
 };
 
-use dprs::app::state_machine::{AppState, AppEvent};
+use dprs::app::state_machine::AppState;
 use dprs::app::actions::{copy_ip_address, open_browser, stop_container};
 use dprs::display::toast::ToastManager;
 use dprs::display;

@@ -1,4 +1,3 @@
-use std::process::Command;
 use clipboard::{ClipboardContext, ClipboardProvider};
 
 use crate::app::state_machine::AppState;

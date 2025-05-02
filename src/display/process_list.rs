@@ -1,6 +1,6 @@
 use ratatui::{
     backend::Backend,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::Rect,
     style::{Color, Modifier, Style},
     text::{Span,Line},
     widgets::{Block, Borders, List, ListItem, BorderType, Padding},
