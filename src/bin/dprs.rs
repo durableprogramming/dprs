@@ -21,7 +21,7 @@ fn main() -> Result<(), io::Error>{
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    run_app(&mut terminal);
+    let _=run_app(&mut terminal);
 
     Ok(())
 }
