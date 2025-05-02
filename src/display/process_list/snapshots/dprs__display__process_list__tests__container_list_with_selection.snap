@@ -1,0 +1,24 @@
+---
+source: src/display/process_list/tests.rs
+expression: terminal.backend().to_string()
+---
+"╭Docker Containers─────────────────────────────────────────────────────────────────────────────────╮"
+"│                                                                                                  │"
+"│   web-server (nginx:latest)                                                                      │"
+"│   Status: Up 2 hours                                                                             │"
+"│   IP:     172.17.0.2                                                                             │"
+"│   Ports:  80/tcp, 443/tcp                                                                        │"
+"│                                                                                                  │"
+"│>> database (postgres:13)                                                                         │"
+"│   Status: Up 1 day                                                                               │"
+"│   IP:     172.17.0.3                                                                             │"
+"│   Ports:  5432/tcp                                                                               │"
+"│                                                                                                  │"
+"│                                                                                                  │"
+"│                                                                                                  │"
+"│                                                                                                  │"
+"│                                                                                                  │"
+"│                                                                                                  │"
+"│                                                                                                  │"
+"│                                                                                                  │"
+"╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
