@@ -17,7 +17,7 @@ pub mod toast;
 pub mod log_tabs;
 
 pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: &ToastManager) {
-    let size = f.size();
+    let size = f.area();
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)

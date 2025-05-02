@@ -24,6 +24,12 @@ pub struct ToastManager {
     toast: Option<Toast>,
 }
 
+impl Default for ToastManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ToastManager {
     pub fn new() -> Self {
         Self { toast: None }

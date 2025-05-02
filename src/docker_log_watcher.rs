@@ -87,10 +87,10 @@ impl DockerLogWatcher {
             });
 
             let running_clone = Arc::clone(&running);
-            let watcher = thread::spawn(move || {
+            let _watcher = thread::spawn(move || {
                 loop {
                     if !*running_clone.lock().unwrap() {
-                        cmd.kill();
+                        let _ = cmd.kill();
                         break;
                     }
                     thread::sleep(Duration::from_millis(100));
@@ -128,6 +128,12 @@ impl DockerLogWatcher {
 
 pub struct DockerLogManager {
     watchers: Vec<DockerLogWatcher>,
+}
+
+impl Default for DockerLogManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DockerLogManager {

@@ -25,6 +25,12 @@ pub struct AppState {
     pub list_state: ListState,
 }
 
+impl Default for AppState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AppState {
     pub fn new() -> Self {
         let mut list_state = ListState::default();

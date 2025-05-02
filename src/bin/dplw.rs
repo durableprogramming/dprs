@@ -56,7 +56,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, log_manager: &mut DockerLogMa
     
     loop {
         terminal.draw(|f| {
-            let size = f.size();
+            let size = f.area();
             
             // Create layout with tabs at top, logs below
             let chunks = Layout::default()

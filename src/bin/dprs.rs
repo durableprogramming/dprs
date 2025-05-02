@@ -33,8 +33,6 @@ fn run_app<B: Backend>(
     // Setup terminal
     enable_raw_mode()?;
     stdout().execute(EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout());
-    let mut terminal = Terminal::new(backend)?;
 
     // App state
     let mut app_state = AppState::new();
