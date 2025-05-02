@@ -129,5 +129,4 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, log_manager: &mut DockerLogMa
         }
     }
     
-    Ok(())
 }
