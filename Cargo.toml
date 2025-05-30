@@ -3,6 +3,9 @@ name = "dprs"
 version = "0.1.0"
 edition = "2024"
 authors = ["Durable Programming, LLC"]
+license = 'MIT'
+readme = 'README.md'
+homepage = 'https://durableprogramming.com/'
 
 [dependencies]
 clipboard = "0.5.0"
