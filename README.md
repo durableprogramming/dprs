@@ -87,6 +87,8 @@ Contributions are welcome! Please read our contributing guidelines and code of c
 
 ## License
 
+MIT.
+
 Copyright (c) 2025 Durable Programming, LLC. All rights reserved.
 
 ## Support
