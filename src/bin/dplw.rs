@@ -1,8 +1,9 @@
-// The dplw (Docker Process Log Watcher) binary provides a terminal user interface
-// for monitoring logs from Docker containers in real-time. It allows users to
-// view logs from multiple containers simultaneously, switch between containers
-// with arrow keys, scroll through logs, and refresh the container list. This
-// file contains the main application loop and UI rendering logic.
+// The dplw (Docker Process Log Watcher) binary provides a terminal user
+// interface for monitoring logs from Docker containers in real-time. It
+// allows users to view logs from multiple containers simultaneously,
+// switch between containers with arrow keys, scroll through logs, and
+// refresh the container list. This file contains the main application loop
+// and UI rendering logic.
 
 use crossterm::{
     event::{self, Event, KeyCode},
@@ -272,4 +273,5 @@ mod tests {
         assert!(mock_ref.was_refresh_called());
     }
 }
+
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

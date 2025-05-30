@@ -1,8 +1,9 @@
-// The log_tabs module provides UI components for switching between Docker container logs.
-// It implements a tabbed interface that allows users to select which container's logs to view.
-// The module contains the LogTabs struct that manages tab state and navigation, along with
-// a render function that displays the tabs at the top of the log viewer with proper styling
-// and highlighting of the currently selected container.
+// The log_tabs module provides UI components for switching between
+// Docker container logs. It implements a tabbed interface that allows
+// users to select which container's logs to view. The module contains
+// the LogTabs struct that manages tab state and navigation, along with
+// a render function that displays the tabs at the top of the log viewer
+// with proper styling and highlighting of the currently selected container.
 
 use ratatui::{
     backend::Backend,
@@ -73,6 +74,5 @@ pub fn render_log_tabs<B: Backend>(f: &mut Frame, log_tabs: &LogTabs, area: Rect
 
 #[cfg(test)]
 mod tests;
-
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

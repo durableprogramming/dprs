@@ -1,3 +1,9 @@
+// The tests module for the log_tabs component validates the rendering
+// and container tab display functionality. It contains tests for various
+// tab states: standard rendering with multiple tabs, tabs with active
+// selection, empty tab lists, and style verification. Tests use snapshot
+// assertions to verify visual appearance and content checks to ensure all
+// container names are properly displayed in the tabs interface.
 
 use insta::assert_snapshot;
 use ratatui::{backend::TestBackend, Terminal};
@@ -76,3 +82,5 @@ fn test_log_tabs_styles() {
     assert!(output.contains("container3"));
     assert!(output.contains("Containers"));
 }
+
+// Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

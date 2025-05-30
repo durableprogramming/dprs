@@ -3,5 +3,5 @@ source: src/display/hotkey_bar/tests.rs
 expression: terminal.backend().to_string()
 ---
 "┌Hotkeys───────────────────────────────────────────────────────────────────────────────────────────┐"
-"│q: Quit | j/↓: Down | k/↑: Up | c: Copy IP | l: Open in Browser | x: Stop Container | r: Reload   │"
+"│q: Quit | j/↓: Down | k/↑: Up | c: Copy IP | l: Open in Browser | x: Stop Container | r: Restart C│"
 "└──────────────────────────────────────────────────────────────────────────────────────────────────┘"

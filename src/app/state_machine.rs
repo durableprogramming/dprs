@@ -1,8 +1,10 @@
-// The state_machine module manages the core application state for the Docker container management TUI.
-// It defines the Container struct to store container information, AppEvent enum for user interactions,
-// and AppState for maintaining the current application state including container list and selection.
-// The implementation includes methods to navigate container lists, select containers, and refresh
-// container data by querying the Docker CLI. This serves as the central data model for the application.
+// The state_machine module manages the core application state for the
+// Docker container management TUI. It defines the Container struct to store
+// container information, AppEvent enum for user interactions, and AppState
+// for maintaining the current application state including container list
+// and selection. The implementation includes methods to navigate container
+// lists, select containers, and refresh container data by querying the
+// Docker CLI. This serves as the central data model for the application.
 
 use ratatui::widgets::ListState;
 use std::io::{Error, ErrorKind};

@@ -1,3 +1,10 @@
+// The tests module for the process_list component validates the
+// container list display rendering. It includes tests for different
+// container list states: empty lists, populated lists with multiple
+// containers, lists with selection highlighting, and proper styling of
+// container information. Tests use snapshot assertions to verify visual
+// appearance and content checks to ensure all container details (name,
+// image, status, IP, ports) are correctly displayed in the formatted output.
 
 use insta::assert_snapshot;
 use ratatui::{backend::TestBackend, Terminal};
@@ -123,3 +130,5 @@ fn test_container_list_styles() {
     
     assert_snapshot!(output);
 }
+
+// Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

@@ -1,9 +1,11 @@
-// The toast module implements a notification system for the Docker Process Management TUI.
-// It provides a temporary overlay that displays messages to the user for a specified duration
-// before automatically disappearing. The module defines the Toast struct for individual messages
-// and the ToastManager for handling message display, timing, and cleanup. This notification
-// system provides feedback for user actions like copying IP addresses, stopping containers,
-// or encountering errors during operations.
+// The toast module implements a notification system for the Docker
+// Process Management TUI. It provides a temporary overlay that displays
+// messages to the user for a specified duration before automatically
+// disappearing. The module defines the Toast struct for individual
+// messages and the ToastManager for handling message display, timing,
+// and cleanup. This notification system provides feedback for user actions
+// like copying IP addresses, stopping containers, or encountering errors
+// during operations.
 
 use std::time::{Duration, Instant};
 

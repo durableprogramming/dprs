@@ -1,10 +1,10 @@
-// /**
-// * Implements container management functionality for stopping Docker containers.
-// * This module contains a function to stop the selected container by executing
-// * a 'docker stop' command, allowing users to halt container execution directly
-// * from the TUI interface. After stopping a container, it automatically reloads
-// * the container list to reflect the current state.
-// */
+// 
+//  Implements container management functionality for stopping Docker containers.
+//  This module contains a function to stop the selected container by executing
+//  a 'docker stop' command, allowing users to halt container execution directly
+//  from the TUI interface. After stopping a container, it automatically reloads
+//  the container list to reflect the current state.
+
 use crate::app::state_machine::AppState;
 use std::process::Command;
 

@@ -10,9 +10,7 @@
   # https://devenv.sh/languages/
   languages.rust.enable = true;
   languages.rust.channel= "stable";
-  languages.python.enable = true;
-  languages.python.venv.enable = true;
-  languages.python.poetry.enable = true;
+  languages.rust.components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" "llvm-tools"];
 
 
   # https://devenv.sh/scripts/

@@ -1,8 +1,7 @@
-// /**
-// * Implements clipboard functionality for Docker container IP addresses.
-// * This module contains a function to copy the selected container's IP address
-// * to the system clipboard, allowing users to easily use container IPs in other applications.
-// */
+//  Implements clipboard functionality for Docker container IP addresses.
+//  This module contains a function to copy the selected container's IP address
+//  to the system clipboard, allowing users to easily use container IPs in other applications.
+
 use clipboard::{ClipboardContext, ClipboardProvider};
 
 use crate::app::state_machine::AppState;
@@ -26,5 +25,8 @@ pub fn copy_ip_address(app_state: &AppState) -> Result<(), String> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

@@ -1,3 +1,11 @@
+// The tests module for the toast notification component validates
+// functionality of temporary message displays. It contains unit tests
+// for creating toasts, checking expiration timing, and verifying
+// ToastManager operations like showing, clearing, and automatically
+// expiring notifications. Tests cover both successful display cases and
+// proper cleanup to ensure notifications appear for the correct duration
+// and are removed appropriately when expired.
+
 use super::*;
 use std::thread::sleep;
 
@@ -66,3 +74,5 @@ fn test_toast_manager_default() {
     let manager = ToastManager::default();
     assert!(manager.get_toast().is_none());
 }
+
+// Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

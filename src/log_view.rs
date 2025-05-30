@@ -1,10 +1,11 @@
-// The log_view module provides components for displaying and navigating container logs
-// in the Docker Process Management TUI. It defines the LogView struct for storing and
-// managing log entries with different severity levels (Info, Warning, Error, Debug),
-// along with methods for scrolling through logs and adding new entries. The module
-// also implements a renderer function that creates a styled paragraph widget for
-// displaying logs with appropriate colors and formatting based on log levels,
-// supporting features like auto-scrolling and position tracking.
+// The log_view module provides components for displaying and navigating
+// container logs in the Docker Process Management TUI. It defines the
+// LogView struct for storing and managing log entries with different
+// severity levels (Info, Warning, Error, Debug), along with methods
+// for scrolling through logs and adding new entries. The module also
+// implements a renderer function that creates a styled paragraph widget
+// for displaying logs with appropriate colors and formatting based on log
+// levels, supporting features like auto-scrolling and position tracking.
 
 use ratatui::{
     backend::Backend,

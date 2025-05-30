@@ -1,8 +1,9 @@
-// The hotkey_bar module provides a render function for displaying available keyboard
-// shortcuts at the top of the TUI application. It creates a visually styled horizontal
-// bar that shows all available commands with their corresponding keys, using different
-// colors to distinguish key types and make the interface more intuitive for users.
-// This component helps users understand the available interactions at a glance.
+// The hotkey_bar module provides a render function for displaying
+// available keyboard shortcuts at the top of the TUI application. It creates
+// a visually styled horizontal bar that shows all available commands with
+// their corresponding keys, using different colors to distinguish key
+// types and make the interface more intuitive for users. This component
+// helps users understand the available interactions at a glance.
 
 use ratatui::{
     backend::Backend,
@@ -61,7 +62,7 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect) {
                 .fg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::raw(": Reload"),
+        Span::raw(": Restart Container"),
     ];
 
     let help = Paragraph::new(Line::from(help_text))
