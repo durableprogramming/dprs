@@ -3,16 +3,38 @@ name = "dprs"
 version = "0.1.0"
 edition = "2024"
 authors = ["Durable Programming, LLC"]
-license = 'MIT'
-readme = 'README.md'
-homepage = 'https://durableprogramming.com/'
+license = "MIT"
+readme = "README.md"
+homepage = "https://durableprogramming.com/"
+description = "dprs (Docker PRocesS viewer ) is a terminal user interface for managing Docker containers and monitoring their logs."
+repository = "https://github.com/durableprogramming/dprs" 
+keywords = ["docker", "tui", "cli", "process-manager", "logs"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 clipboard = "0.5.0"
 crossterm = "0.29.0"
-mockall = "0.13.1"
-ratatui = { version = "0.29.0", features=["macros"]}
+ratatui = { version = "0.29.0", features=["macros"] }
 
 [dev-dependencies]
 insta = "1.43.1"
+mockall = "0.13.1" 
+
+[[bin]]
+name = "dprs"
+path = "src/bin/dprs.rs"
+
+[[bin]]
+name = "dplw"
+path = "src/bin/dplw.rs"
+
+[features]
+default = []
+
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
 
