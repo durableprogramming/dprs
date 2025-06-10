@@ -13,6 +13,8 @@ Hide
 Sleep 1s 
 
 Type "export PS1='$ '" Sleep 50ms Enter
+Type "export GTK_DEBUG=''" Sleep 50ms Enter
+
 Type "clear" Sleep 50ms Enter
 Show
 
