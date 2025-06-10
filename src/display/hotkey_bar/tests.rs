@@ -44,7 +44,7 @@ fn test_hotkey_bar_contents() {
     assert!(output.contains("c: Copy IP"));
     assert!(output.contains("l: Open in Browser"));
     assert!(output.contains("x: Stop Container"));
-    assert!(output.contains("r: Reload"));
+    assert!(output.contains("r: Restart"));
 }
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.
