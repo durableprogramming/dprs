@@ -1,4 +1,4 @@
-// The tests module for the hotkey_bar component validates the rendering
+//  The tests module for the hotkey_bar component validates the rendering
 //  and content of the keyboard shortcut display. It contains two test cases:
 //  one that verifies the visual appearance of the rendered hotkey bar using
 //  snapshot testing, and another that checks all key commands are properly

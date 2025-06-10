@@ -1,3 +1,4 @@
+//
 // The hotkey_bar module provides a render function for displaying
 // available keyboard shortcuts at the top of the TUI application. It creates
 // a visually styled horizontal bar that shows all available commands with

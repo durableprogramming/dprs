@@ -1,10 +1,13 @@
 // The display module provides UI rendering components for the Docker Process Management TUI.
 // It defines the main draw function that orchestrates rendering of all UI elements
+//
 // and contains submodules for specific interface components:
+//
 // - hotkey_bar: displays available keyboard shortcuts at the top of the screen
 // - process_list: renders the container list with details like name, status, and IP
 // - toast: implements a notification system for user feedback
 // - log_tabs: provides container selection tabs for the log viewer
+//
 // The module creates a consistent visual layout and handles all rendering logic.
 
 use ratatui::{

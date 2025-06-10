@@ -1,7 +1,7 @@
 [package]
 name = "dprs"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 authors = ["Durable Programming, LLC"]
 license = "MIT"
 readme = "README.md"
@@ -27,10 +27,6 @@ path = "src/bin/dprs.rs"
 [[bin]]
 name = "dplw"
 path = "src/bin/dplw.rs"
-
-[features]
-default = []
-
 
 [profile.release]
 lto = true

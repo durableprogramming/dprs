@@ -8,9 +8,9 @@
   packages = [ pkgs.git pkgs.xorg.libxcb pkgs.bashInteractive];
 
   # https://devenv.sh/languages/
-  languages.rust.enable = true;
-  languages.rust.channel= "stable";
-  languages.rust.components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" "llvm-tools"];
+  #languages.rust.enable = true;
+  #languages.rust.channel= "stable";
+  # languages.rust.components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" "llvm-tools"];
 
 
   # https://devenv.sh/scripts/
@@ -34,3 +34,4 @@
 
   # See full reference at https://devenv.sh/reference/options/
 }
+
