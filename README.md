@@ -2,6 +2,8 @@
 
 DPRS (Docker Process Manager) is a terminal user interface for managing Docker containers and monitoring their logs. Built with a focus on reliability, usability, and efficient container management.
 
+![DPRS demo video](demo/demo.gif)
+
 ## Features
 
 - Container Management
