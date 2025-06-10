@@ -1,0 +1,217 @@
+version: '3.8'
+
+networks:
+  demo_complex_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  nocodb_data:
+  redpanda_data:
+  clickhouse_data:
+  redis_data:
+  nginx_config:
+  nginx_html:
+  grafana_data:
+
+services:
+  # --- Core Databases ---
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: demo_postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: demouser
+      POSTGRES_PASSWORD: demopassword
+      POSTGRES_DB: demo_main_db
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - demo_complex_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demouser -d demo_main_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  clickhouse_db:
+    image: clickhouse/clickhouse-server:latest
+    container_name: demo_clickhouse_db
+    restart: unless-stopped
+    ports:
+      - "18123:8123" # HTTP
+      - "19000:9000" # Native TCP
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      # - ./clickhouse_config/users.xml:/etc/clickhouse-server/users.xml # Example custom config
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    networks:
+      - demo_complex_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- In-Memory Cache ---
+  redis_cache:
+    image: redis:7-alpine
+    container_name: demo_redis_cache
+    restart: unless-stopped
+    ports:
+      - "16379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - demo_complex_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Message Broker (Kafka Compatible) ---
+  redpanda_kafka_broker:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: demo_redpanda_broker
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --smp 1
+      - --memory 1G
+      - --reserve-memory 0M
+      - --overprovisioned
+      - --node-id 0
+      - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:19092
+      - --advertise-kafka-addr PLAINTEXT://redpanda_kafka_broker:29092,OUTSIDE://localhost:19092
+      - --pandaproxy-addr PLAINTEXT://0.0.0.0:28082,OUTSIDE://0.0.0.0:18082
+      - --advertise-pandaproxy-addr PLAINTEXT://redpanda_kafka_broker:28082,OUTSIDE://localhost:18082
+      - --rpc-addr 0.0.0.0:33145
+      - --advertise-rpc-addr redpanda_kafka_broker:33145
+    ports:
+      - "19092:19092" # Kafka API external
+      - "18082:18082" # Pandaproxy HTTP API external
+      - "19644:9644"  # Admin API
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    networks:
+      - demo_complex_network
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # --- Airtable Alternative ---
+  nocodb_airtable_alt:
+    image: nocodb/nocodb:latest
+    container_name: demo_nocodb_airtable_alt
+    restart: unless-stopped
+    ports:
+      - "18080:8080"
+    environment:
+      NC_DB: "pg://postgres_db:5432?u=demouser&p=demopassword&d=demo_main_db"
+      NC_AUTH_JWT_SECRET: "a_very_secure_secret_for_nocodb_jwt"
+    volumes:
+      - nocodb_data:/usr/app/data
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    networks:
+      - demo_complex_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/db/meta/projects"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # --- Web Server ---
+  nginx_web_server:
+    image: nginx:latest
+    container_name: demo_nginx_web_server
+    restart: unless-stopped
+    ports:
+      - "10080:80"
+      - "10443:443"
+    volumes:
+      - nginx_html:/usr/share/nginx/html # For static files
+      - nginx_config:/etc/nginx/conf.d # For custom Nginx config
+      # - ./nginx_config/default.conf:/etc/nginx/conf.d/default.conf # Example custom config
+      # - ./nginx_html:/usr/share/nginx/html # Mount local html content
+    networks:
+      - demo_complex_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # --- Custom Application Service ---
+  my_app_service_alpha:
+    image: alpine/git # Using a small image with some tools
+    container_name: demo_my_app_alpha
+    restart: unless-stopped
+    command: sleep 360
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql://demouser:demopassword@postgres_db:5432/demo_main_db
+      KAFKA_BROKER: redpanda_kafka_broker:29092
+    depends_on:
+      - postgres_db
+      - redpanda_kafka_broker
+    networks:
+      - demo_complex_network
+
+  my_app_service_beta:
+    image: curlimages/curl:latest
+    container_name: demo_my_app_beta
+    restart: on-failure
+    command: sleep 360
+    depends_on:
+      - nginx_web_server
+      - redpanda_kafka_broker
+    networks:
+      - demo_complex_network
+
+
+  grafana_dashboard:
+    image: grafana/grafana:latest
+    container_name: demo_grafana_dashboard
+    restart: unless-stopped
+    ports:
+      - "13000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: adminpassword
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - demo_complex_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # --- Example Scheduled Task Runner ---
+  cron_job_runner:
+    image: mcuadros/ofelia:latest # Simple cron-like scheduler for Docker
+    container_name: demo_cron_runner
+    restart: always
+    command: daemon --docker
+    labels:
+      ofelia.job-exec.my_app_alpha.schedule: "@every 1h"
+      ofelia.job-exec.my_app_alpha.command: "echo 'Hourly job running for my_app_alpha from Ofelia at $(date)'"
+      ofelia.job-exec.my_app_alpha.container: "demo_my_app_alpha"
+    networks:
+      - demo_complex_network
