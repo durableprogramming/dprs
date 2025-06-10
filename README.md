@@ -1,9 +1,25 @@
 # DPRS - Docker Process Management TUI
 
-DPRS (Docker Process Manager) is a terminal user interface for managing Docker containers and monitoring their logs. Built with a focus on reliability, usability, and efficient container management.
+DPRS (Docker PRocesS Manager) is a terminal user interface for managing Docker containers and monitoring their logs. Built with a focus on reliability, usability, and efficient container management.
+
+DPRS is designed to assist in software development, not sysadmin or DevOps, and features related to those tasks are prioritized.
 
 ![DPRS demo video](demo/demo.gif)
 
+
+```
+        .o8                               
+       "888                               
+   .oooo888  oo.ooooo.  oooo d8b  .oooo.o 
+  d88' `888   888' `88b `888""8P d88(  `8 
+  888   888   888   888  888     `"Y88b.  
+  888   888   888   888  888     o.  )88b 
+  `Y8bod88P"  888bod8P' d888b    8""888P' 
+   ---------  888  ---------------------  
+             o888o                        
+                                          
+
+```
 ## Features
 
 - Container Management
