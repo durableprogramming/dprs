@@ -5,12 +5,12 @@
   env.GREET = "devenv";
 
   # https://devenv.sh/packages/
-  packages = [ pkgs.git pkgs.xorg.libxcb pkgs.bashInteractive];
+  packages = [ pkgs.git pkgs.xorg.libxcb pkgs.bashInteractive pkgs.cmake pkgs.xorg.libX11.dev];
 
   # https://devenv.sh/languages/
-  #languages.rust.enable = true;
-  #languages.rust.channel= "stable";
-  # languages.rust.components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" "llvm-tools"];
+  languages.rust.enable = true;
+  languages.rust.channel= "beta";
+  languages.rust.components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" "llvm-tools"];
 
 
   # https://devenv.sh/scripts/

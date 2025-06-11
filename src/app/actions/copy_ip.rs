@@ -2,7 +2,8 @@
 //  This module contains a function to copy the selected container's IP address
 //  to the system clipboard, allowing users to easily use container IPs in other applications.
 
-use clipboard::{ClipboardContext, ClipboardProvider};
+use copypasta_ext::prelude::*;
+use copypasta_ext::x11_bin::ClipboardContext;
 
 use crate::app::state_machine::AppState;
 
@@ -17,11 +18,9 @@ pub fn copy_ip_address(app_state: &AppState) -> Result<(), String> {
         .get(selected)
         .ok_or("Invalid container index")?;
 
-    let mut ctx: ClipboardContext =
-        ClipboardProvider::new().map_err(|e| format!("Failed to initialize clipboard: {}", e))?;
+    let mut ctx: ClipboardContext = ClipboardContext::new().unwrap();
 
-    ctx.set_contents(container.ip_address.clone())
-        .map_err(|e| format!("Failed to copy to clipboard: {}", e))?;
+    ctx.set_contents(container.ip_address.clone().to_owned()).map_err(|e| format!("Failed to copy to clipboard: {}", e))?;
 
     Ok(())
 }

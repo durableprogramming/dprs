@@ -12,7 +12,8 @@ keywords = ["docker", "tui", "cli", "process-manager", "logs"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
-clipboard = "0.5.0"
+copypasta = "0.10.2"
+copypasta-ext = "0.4.4"
 crossterm = "0.29.0"
 ratatui = { version = "0.29.0", features=["macros"] }
 
