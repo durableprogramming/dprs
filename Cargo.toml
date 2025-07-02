@@ -35,3 +35,27 @@ codegen-units = 1
 panic = "abort"
 strip = true
 
+[package.metadata.deb]
+maintainer = "Durable Programming, LLC <contact@durableprogramming.com>"
+copyright = "2025, Durable Programming, LLC"
+license-file = ["LICENSE.md", "4"]
+extended-description = """\
+DPRS (Docker PRocesS Manager) is a terminal user interface for managing Docker containers and monitoring their logs. Built with a focus on reliability, usability, and efficient container management.
+
+Features:
+- Container Management: List, stop, and manage running containers
+- Log Monitoring: Real-time log streaming with color-coded levels
+- Easy Navigation: Intuitive keyboard shortcuts
+- Browser Integration: Open container web interfaces
+- Clipboard Support: Copy container IP addresses
+
+DPRS is designed to assist in software development workflows."""
+depends = "docker.io | docker-ce"
+section = "utils"
+priority = "optional"
+assets = [
+    ["target/release/dprs", "usr/bin/", "755"],
+    ["target/release/dplw", "usr/bin/", "755"],
+    ["README.md", "usr/share/doc/dprs/", "644"],
+    ["LICENSE.md", "usr/share/doc/dprs/", "644"],
+]
