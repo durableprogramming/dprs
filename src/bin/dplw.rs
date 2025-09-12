@@ -65,9 +65,9 @@ fn run_app<B: Backend>(
 ) -> Result<(), io::Error> {
     // Initialize log manager
 
-    // Create log view for displaying logs
-    let mut log_view = LogView::new(1000);
-
+    // Create log views for each container (one per container)
+    let mut log_views: Vec<LogView> = Vec::new();
+    
     // Create tabs for container selection
     let container_names: Vec<String> = (0..log_manager.watcher_count())
         .filter_map(|i| {
@@ -76,6 +76,11 @@ fn run_app<B: Backend>(
                 .map(|w| w.container_name().to_string())
         })
         .collect();
+
+    // Initialize log views for each container
+    for _ in 0..container_names.len() {
+        log_views.push(LogView::new(1000));
+    }
 
     let mut log_tabs = LogTabs::new(container_names);
 
@@ -102,13 +107,29 @@ fn run_app<B: Backend>(
             // Render logs for selected container
             if let Some(active_tab) = log_tabs.index.checked_sub(0) {
                 if let Some(watcher) = log_manager.get_watcher(active_tab) {
-                    // Clear and refill the log view with current container logs
-                    log_view = LogView::new(1000);
-                    for log_line in watcher.get_logs() {
-                        log_view.add_log(log_line, LogLevel::Info);
-                    }
+                    if active_tab < log_views.len() {
+                        // Update logs for current container if needed
+                        let current_log_view = &mut log_views[active_tab];
+                        let current_logs = watcher.get_logs();
+                        
+                        // Only update if we have a different number of logs
+                        if current_log_view.get_log_count() != current_logs.len() {
+                            // Preserve scroll position
+                            let scroll_pos = current_log_view.get_scroll_position();
+                            *current_log_view = LogView::new(1000);
+                            
+                            for log_line in current_logs {
+                                current_log_view.add_log(log_line, LogLevel::Info);
+                            }
+                            
+                            // Restore scroll position if it's still valid
+                            if scroll_pos < current_log_view.get_log_count() {
+                                current_log_view.set_scroll_position(scroll_pos);
+                            }
+                        }
 
-                    render_log_view::<B>(f, &log_view, chunks[1]);
+                        render_log_view::<B>(f, current_log_view, chunks[1]);
+                    }
                 }
             }
 
@@ -160,10 +181,34 @@ fn run_app<B: Backend>(
                     }
                     KeyCode::Right => log_tabs.next(),
                     KeyCode::Left => log_tabs.previous(),
-                    KeyCode::Up => log_view.scroll_up(),
-                    KeyCode::Down => log_view.scroll_down(),
-                    KeyCode::Home => log_view.scroll_to_top(),
-                    KeyCode::End => log_view.scroll_to_bottom(),
+                    KeyCode::Up => {
+                        if let Some(active_tab) = log_tabs.index.checked_sub(0) {
+                            if active_tab < log_views.len() {
+                                log_views[active_tab].scroll_up();
+                            }
+                        }
+                    },
+                    KeyCode::Down => {
+                        if let Some(active_tab) = log_tabs.index.checked_sub(0) {
+                            if active_tab < log_views.len() {
+                                log_views[active_tab].scroll_down();
+                            }
+                        }
+                    },
+                    KeyCode::Home => {
+                        if let Some(active_tab) = log_tabs.index.checked_sub(0) {
+                            if active_tab < log_views.len() {
+                                log_views[active_tab].scroll_to_top();
+                            }
+                        }
+                    },
+                    KeyCode::End => {
+                        if let Some(active_tab) = log_tabs.index.checked_sub(0) {
+                            if active_tab < log_views.len() {
+                                log_views[active_tab].scroll_to_bottom();
+                            }
+                        }
+                    },
                     KeyCode::Char('r') => {
                         log_manager.refresh()?;
                         // Update tabs with new container names
@@ -174,7 +219,13 @@ fn run_app<B: Backend>(
                                     .map(|w| w.container_name().to_string())
                             })
                             .collect();
-                        log_tabs = LogTabs::new(container_names);
+                        log_tabs = LogTabs::new(container_names.clone());
+                        
+                        // Recreate log views for the new containers
+                        log_views.clear();
+                        for _ in 0..container_names.len() {
+                            log_views.push(LogView::new(1000));
+                        }
                     }
                     _ => {}
                 }

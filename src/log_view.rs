@@ -18,6 +18,8 @@ use ratatui::{
 
 use std::collections::VecDeque;
 use std::time::Instant;
+use tailspin::Highlighter;
+use ansi_to_tui::IntoText;
 
 pub struct LogEntry {
     pub timestamp: Instant,
@@ -88,6 +90,39 @@ impl LogView {
     pub fn get_scroll_position(&mut self) -> usize {
         return self.scroll_position;
     }
+
+    pub fn get_log_count(&self) -> usize {
+        self.logs.len()
+    }
+
+    pub fn set_scroll_position(&mut self, position: usize) {
+        self.scroll_position = position.min(self.logs.len().saturating_sub(1));
+    }
+}
+
+fn parse_log_with_tailspin(message: &str) -> Vec<Span> {
+    // Create a tailspin highlighter with default settings
+    let highlighter = Highlighter::default();
+    
+    // Apply tailspin highlighting to get ANSI-colored string
+    let highlighted_message = highlighter.apply(message);
+    
+    // Convert ANSI-colored string to ratatui Text and extract spans
+    match highlighted_message.as_ref().into_text() {
+        Ok(text) => {
+            // Extract spans from the first line of the text
+            if let Some(line) = text.lines.first() {
+                line.spans.clone()
+            } else {
+                // Fallback to plain text if conversion fails
+                vec![Span::styled(message, Style::default().fg(Color::White))]
+            }
+        }
+        Err(_) => {
+            // Fallback to plain text if conversion fails
+            vec![Span::styled(message, Style::default().fg(Color::White))]
+        }
+    }
 }
 
 pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &LogView, area: Rect) {
@@ -96,14 +131,8 @@ pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &LogView, area: Rect
     let log_lines: Vec<Line> = logs
         .iter()
         .map(|entry| {
-            let style = match entry.level {
-                LogLevel::Info => Style::default().fg(Color::Green),
-                LogLevel::Warning => Style::default().fg(Color::Yellow),
-                LogLevel::Error => Style::default().fg(Color::Red),
-                LogLevel::Debug => Style::default().fg(Color::Blue),
-            };
-
-            Line::from(Span::styled(&entry.message, style))
+            let spans = parse_log_with_tailspin(&entry.message);
+            Line::from(spans)
         })
         .collect();
 
