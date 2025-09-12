@@ -6,7 +6,7 @@
 // and UI rendering logic.
 
 use crossterm::{
-    event::{self, Event, KeyCode},
+    event::{self, Event, KeyCode, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
@@ -33,19 +33,30 @@ fn main() -> Result<(), io::Error> {
 
     let mut log_manager = DockerLogManager::new();
     log_manager.start_watching_all_containers()?;
-    let result = run_app(&mut terminal, &mut log_manager);
+    
+    // Ensure cleanup happens even if there's a panic
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        run_app(&mut terminal, &mut log_manager)
+    }));
 
-    // Restore terminal
-    disable_raw_mode()?;
-    stdout().execute(LeaveAlternateScreen)?;
+    // Always restore terminal, regardless of what happened
+    let _ = disable_raw_mode();
+    let _ = stdout().execute(LeaveAlternateScreen);
 
+    // Always stop log manager
     log_manager.stop_all();
 
-    if let Err(err) = result {
-        println!("Error: {}", err);
+    match result {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(err)) => {
+            println!("Error: {}", err);
+            Err(err)
+        }
+        Err(_) => {
+            println!("Application panicked");
+            std::process::exit(1);
+        }
     }
-
-    Ok(())
 }
 
 fn run_app<B: Backend>(
@@ -104,7 +115,7 @@ fn run_app<B: Backend>(
             // Render help bar
             let help_text = vec![
                 Span::styled(
-                    "q",
+                    "q/Ctrl+C",
                     Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(": Quit | "),
@@ -142,6 +153,9 @@ fn run_app<B: Backend>(
             if let Event::Key(key) = event::read()? {
                 match key.code {
                     KeyCode::Char('q') => {
+                        return Ok(());
+                    }
+                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         return Ok(());
                     }
                     KeyCode::Right => log_tabs.next(),

@@ -7,9 +7,8 @@
 // tasks and implements graceful shutdown through Drop trait implementation.
 
 use bollard::container::{ListContainersOptions, LogsOptions};
-use bollard::models::ContainerSummary;
 use bollard::Docker;
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -73,35 +72,47 @@ impl DockerLogWatcher {
                 let mut stream = docker.logs(&container_name, options);
 
                 use futures_util::stream::StreamExt;
-                while let Some(log_result) = stream.next().await {
-                    if !*running.lock().unwrap() {
-                        break;
-                    }
+                use tokio::time::timeout;
+                
+                while *running.lock().unwrap() {
+                    // Use timeout to avoid hanging indefinitely on stream.next()
+                    let timeout_duration = Duration::from_millis(100);
+                    match timeout(timeout_duration, stream.next()).await {
+                        Ok(Some(log_result)) => {
+                            match log_result {
+                                Ok(log_line) => {
+                                    let log_str = match log_line {
+                                        bollard::container::LogOutput::StdOut { message } => {
+                                            String::from_utf8_lossy(&message).trim_end().to_string()
+                                        }
+                                        bollard::container::LogOutput::StdErr { message } => {
+                                            format!("ERROR: {}", String::from_utf8_lossy(&message).trim_end())
+                                        }
+                                        bollard::container::LogOutput::Console { message } => {
+                                            String::from_utf8_lossy(&message).trim_end().to_string()
+                                        }
+                                        bollard::container::LogOutput::StdIn { message: _ } => continue,
+                                    };
 
-                    match log_result {
-                        Ok(log_line) => {
-                            let log_str = match log_line {
-                                bollard::container::LogOutput::StdOut { message } => {
-                                    String::from_utf8_lossy(&message).trim_end().to_string()
+                                    let mut logs = logs.lock().unwrap();
+                                    logs.push_back(log_str);
+                                    while logs.len() > max_logs {
+                                        logs.pop_front();
+                                    }
                                 }
-                                bollard::container::LogOutput::StdErr { message } => {
-                                    format!("ERROR: {}", String::from_utf8_lossy(&message).trim_end())
+                                Err(e) => {
+                                    eprintln!("Error reading logs for {}: {}", container_name, e);
+                                    break;
                                 }
-                                bollard::container::LogOutput::Console { message } => {
-                                    String::from_utf8_lossy(&message).trim_end().to_string()
-                                }
-                                bollard::container::LogOutput::StdIn { message: _ } => continue,
-                            };
-
-                            let mut logs = logs.lock().unwrap();
-                            logs.push_back(log_str);
-                            while logs.len() > max_logs {
-                                logs.pop_front();
                             }
                         }
-                        Err(e) => {
-                            eprintln!("Error reading logs for {}: {}", container_name, e);
+                        Ok(None) => {
+                            // Stream ended, exit gracefully
                             break;
+                        }
+                        Err(_) => {
+                            // Timeout occurred, check if we should still be running
+                            continue;
                         }
                     }
                 }
@@ -117,8 +128,27 @@ impl DockerLogWatcher {
             // Set running state to false
             *self.running.lock().unwrap() = false;
 
-            // Wait for the thread to finish
-            let _ = handle.join();
+            // Give the thread some time to finish gracefully, then terminate if needed
+            std::thread::spawn(move || {
+                // Give the thread up to 1 second to finish gracefully
+                let timeout = Duration::from_secs(1);
+                let start = std::time::Instant::now();
+                
+                let mut join_result = None;
+                while start.elapsed() < timeout {
+                    // Check if thread is still running
+                    if handle.is_finished() {
+                        join_result = Some(handle.join());
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(10));
+                }
+                
+                // If thread hasn't finished, we'll just let it go
+                if join_result.is_none() {
+                    eprintln!("Warning: Log watcher thread did not stop gracefully within timeout");
+                }
+            });
         }
     }
 

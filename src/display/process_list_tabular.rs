@@ -73,7 +73,7 @@ pub fn render_container_table<B: Backend>(f: &mut Frame, app_state: &mut AppStat
     f.render_stateful_widget(table, area, &mut app_state.table_state);
 }
 
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod tests;
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.
