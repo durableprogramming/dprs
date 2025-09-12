@@ -121,5 +121,6 @@ Built with:
 - [ratatui](https://github.com/ratatui-org/ratatui) - Terminal UI framework
 - [crossterm](https://github.com/crossterm-rs/crossterm) - Terminal manipulation
 - [clipboard](https://github.com/aweinstock314/rust-clipboard) - Clipboard integration
+- [tailspin](https://github.com/bensadeh/tailspin) - Log Highlighting
 
 Special thanks to the Docker and Rust communities for their excellent tools and documentation.
