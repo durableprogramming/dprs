@@ -16,9 +16,8 @@ use ratatui::{
 use crate::app::state_machine::AppState;
 
 pub fn render_container_list<B: Backend>(f: &mut Frame, app_state: &mut AppState, area: Rect) {
-    let containers = &app_state.containers;
-
-    let items: Vec<ListItem> = containers
+    let displayed_containers = app_state.get_displayed_containers();
+    let items: Vec<ListItem> = displayed_containers
         .iter()
         .map(|c| {
             let header = Line::from(vec![

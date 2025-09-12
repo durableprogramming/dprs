@@ -63,7 +63,21 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect) {
                 .fg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
         ),
-        Span::raw(": Restart Container"),
+        Span::raw(": Restart | "),
+        Span::styled(
+            "/",
+            Style::default()
+                .fg(Color::LightBlue)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(": Filter | "),
+        Span::styled(
+            "Esc",
+            Style::default()
+                .fg(Color::Gray)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(": Clear Filter"),
     ];
 
     let help = Paragraph::new(Line::from(help_text))

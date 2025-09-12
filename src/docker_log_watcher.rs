@@ -1,15 +1,16 @@
 // The docker_log_watcher module implements real-time Docker container log monitoring.
 // It provides two main components:
-// - DockerLogWatcher: handles log collection for a single container by spawning
-// background threads that execute "docker logs" commands and capture output
+// - DockerLogWatcher: handles log collection for a single container using bollard
 // - DockerLogManager: coordinates multiple watchers and provides container discovery
 // The module supports starting/stopping log collection, retrieving collected logs,
-// and refreshing the container list. It ensures proper resource cleanup with thread
-// management and implements graceful shutdown through Drop trait implementation.
+// and refreshing the container list. It ensures proper resource cleanup with async
+// tasks and implements graceful shutdown through Drop trait implementation.
 
-use std::collections::VecDeque;
-use std::io::{BufRead, BufReader, Error, ErrorKind};
-use std::process::{Command, Stdio};
+use bollard::container::{ListContainersOptions, LogsOptions};
+use bollard::models::ContainerSummary;
+use bollard::Docker;
+use std::collections::{HashMap, VecDeque};
+use std::io::{Error, ErrorKind};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -43,69 +44,68 @@ impl DockerLogWatcher {
         *running.lock().unwrap() = true;
 
         let handle = thread::spawn(move || {
-            let mut cmd = Command::new("docker")
-                .args(["logs", "--follow", "--tail", "100", &container_name])
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()
-                .expect("Failed to start docker logs command");
+            // Create a tokio runtime for this thread
+            let rt = match tokio::runtime::Runtime::new() {
+                Ok(rt) => rt,
+                Err(e) => {
+                    eprintln!("Failed to create tokio runtime: {}", e);
+                    return;
+                }
+            };
 
-            let stdout = cmd.stdout.take().expect("Failed to get stdout");
-            let stderr = cmd.stderr.take().expect("Failed to get stderr");
+            rt.block_on(async {
+                let docker = match Docker::connect_with_defaults() {
+                    Ok(docker) => docker,
+                    Err(e) => {
+                        eprintln!("Failed to connect to Docker: {}", e);
+                        return;
+                    }
+                };
 
-            // Combine stdout and stderr into a single reader
-            let stdout_reader = BufReader::new(stdout);
-            let stderr_reader = BufReader::new(stderr);
+                let options = Some(LogsOptions::<String> {
+                    follow: true,
+                    stdout: true,
+                    stderr: true,
+                    tail: "100".to_string(),
+                    ..Default::default()
+                });
 
-            // Handle stdout in a separate thread
-            let logs_clone = Arc::clone(&logs);
-            let running_clone = Arc::clone(&running);
-            let stdout_handle = thread::spawn(move || {
-                for line in stdout_reader.lines() {
-                    if !*running_clone.lock().unwrap() {
+                let mut stream = docker.logs(&container_name, options);
+
+                use futures_util::stream::StreamExt;
+                while let Some(log_result) = stream.next().await {
+                    if !*running.lock().unwrap() {
                         break;
                     }
 
-                    if let Ok(line) = line {
-                        let mut logs = logs_clone.lock().unwrap();
-                        logs.push_back(line);
-                        while logs.len() > max_logs {
-                            logs.pop_front();
+                    match log_result {
+                        Ok(log_line) => {
+                            let log_str = match log_line {
+                                bollard::container::LogOutput::StdOut { message } => {
+                                    String::from_utf8_lossy(&message).trim_end().to_string()
+                                }
+                                bollard::container::LogOutput::StdErr { message } => {
+                                    format!("ERROR: {}", String::from_utf8_lossy(&message).trim_end())
+                                }
+                                bollard::container::LogOutput::Console { message } => {
+                                    String::from_utf8_lossy(&message).trim_end().to_string()
+                                }
+                                bollard::container::LogOutput::StdIn { message: _ } => continue,
+                            };
+
+                            let mut logs = logs.lock().unwrap();
+                            logs.push_back(log_str);
+                            while logs.len() > max_logs {
+                                logs.pop_front();
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error reading logs for {}: {}", container_name, e);
+                            break;
                         }
                     }
                 }
             });
-
-            // Handle stderr in a separate thread
-            let logs_clone = Arc::clone(&logs);
-            let running_clone = Arc::clone(&running);
-            let stderr_handle = thread::spawn(move || {
-                for line in stderr_reader.lines() {
-                    if !*running_clone.lock().unwrap() {
-                        break;
-                    }
-
-                    if let Ok(line) = line {
-                        let mut logs = logs_clone.lock().unwrap();
-                        logs.push_back(format!("ERROR: {}", line));
-                        while logs.len() > max_logs {
-                            logs.pop_front();
-                        }
-                    }
-                }
-            });
-
-            let running_clone = Arc::clone(&running);
-            let _watcher = thread::spawn(move || loop {
-                if !*running_clone.lock().unwrap() {
-                    let _ = cmd.kill();
-                    break;
-                }
-                thread::sleep(Duration::from_millis(100));
-            });
-            // Wait for both readers to complete
-            stdout_handle.join().unwrap();
-            stderr_handle.join().unwrap();
         });
 
         self.handle = Some(handle);
@@ -157,36 +157,45 @@ impl DockerLogManager {
     }
 
     pub fn start_watching_all_containers(&mut self) -> Result<(), Error> {
-        // Get list of running containers
-        let output = Command::new("docker")
-            .args(["ps", "--format", "{{.Names}}"])
-            .output()
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("Failed to execute docker command: {}", e),
-                )
-            })?;
+        // Create a tokio runtime for this synchronous function
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| Error::new(ErrorKind::Other, format!("Failed to create runtime: {}", e)))?;
 
-        if !output.status.success() {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!(
-                    "Docker command failed: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                ),
-            ));
-        }
+        let container_names = rt.block_on(async {
+            let docker = Docker::connect_with_defaults()
+                .map_err(|e| Error::new(ErrorKind::Other, format!("Failed to connect to Docker: {}", e)))?;
 
-        let output_str = String::from_utf8_lossy(&output.stdout);
+            let options = Some(ListContainersOptions::<String> {
+                all: false,
+                ..Default::default()
+            });
+
+            let containers = docker
+                .list_containers(options)
+                .await
+                .map_err(|e| Error::new(ErrorKind::Other, format!("Failed to list containers: {}", e)))?;
+
+            let names: Vec<String> = containers
+                .into_iter()
+                .filter_map(|container| {
+                    container.names.and_then(|names| {
+                        names.first().map(|name| {
+                            // Remove leading slash from container name
+                            name.strip_prefix('/').unwrap_or(name).to_string()
+                        })
+                    })
+                })
+                .collect();
+
+            Ok::<Vec<String>, Error>(names)
+        })?;
 
         // Clear existing watchers
         self.stop_all();
         self.watchers.clear();
 
         // Start watching each container
-        for line in output_str.lines() {
-            let container_name = line.trim().to_string();
+        for container_name in container_names {
             if !container_name.is_empty() {
                 self.start_watching_container(container_name)?;
             }

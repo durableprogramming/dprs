@@ -82,6 +82,32 @@ fn run_app<B: Backend>(
         // Handle input events
         if event::poll(poll_timeout)? {
             if let Event::Key(key) = event::read()? {
+                // Handle filter mode input
+                if app_state.filter_mode {
+                    match key.code {
+                        KeyCode::Enter => {
+                            app_state.exit_filter_mode();
+                        }
+                        KeyCode::Esc => {
+                            app_state.exit_filter_mode();
+                            app_state.clear_filter();
+                        }
+                        KeyCode::Backspace => {
+                            let mut text = app_state.filter_text.clone();
+                            text.pop();
+                            app_state.update_filter(text);
+                        }
+                        KeyCode::Char(c) => {
+                            let mut text = app_state.filter_text.clone();
+                            text.push(c);
+                            app_state.update_filter(text);
+                        }
+                        _ => {}
+                    }
+                    continue;
+                }
+
+                // Handle normal mode input
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Char('j') | KeyCode::Down => app_state.next(),
@@ -116,6 +142,20 @@ fn run_app<B: Backend>(
                             Err(e) => toast_manager.show(&format!("Error refreshing containers: {}", e), 3000),
                         }
                         last_refresh = Instant::now(); // Reset timer after manual refresh
+                    }
+                    KeyCode::Char('t') => { // Toggle tabular view
+                        app_state.tabular_mode = !app_state.tabular_mode;
+                        let mode_text = if app_state.tabular_mode { "tabular" } else { "normal" };
+                        toast_manager.show(&format!("Switched to {} view", mode_text), 1500);
+                    }
+                    KeyCode::Char('/') => { // Enter filter mode
+                        app_state.enter_filter_mode();
+                    }
+                    KeyCode::Esc => { // Clear filter when not in filter mode
+                        if !app_state.filter_text.is_empty() {
+                            app_state.clear_filter();
+                            toast_manager.show("Filter cleared", 1500);
+                        }
                     }
                     _ => {}
                 }
