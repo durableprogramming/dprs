@@ -10,7 +10,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 
 # VHS tape file path
-TAPE_FILE="$SCRIPT_DIR/dprs.tape"
+TAPE_FILE="$SCRIPT_DIR/demo.tape"
 
 # Variable to store the Docker Compose command
 DOCKER_COMPOSE_CMD=""

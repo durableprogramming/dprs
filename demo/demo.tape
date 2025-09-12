@@ -1,12 +1,20 @@
 Output "demo/demo.gif"
 
-Set Shell bash
-Set FontSize 16
+Set FontSize 18
 Set Width 1200
 Set Height 800
 Set TypingSpeed 100ms
+Set WindowBar Colorful
+Set Margin 1
 
-Hide Sleep 1s Show
+Hide 
+Sleep 1s 
+
+Type "export PS1='$ '" Sleep 50ms Enter
+Type "export GTK_DEBUG=''" Sleep 50ms Enter
+
+Type "clear" Sleep 50ms Enter
+Show
 
 # DPRS Demo
 Type "dprs"
@@ -27,6 +35,14 @@ Sleep 2s # Allow time for toast message if any
 
 # Open browser (no visual in VHS, just showing command)
 Type "l"
+Sleep 2s
+
+# Switch to tab mode
+Type "t"
+Sleep 2s
+
+# Switch back
+Type "t"
 Sleep 2s
 
 # Stop container (no visual change in VHS, just showing command)
