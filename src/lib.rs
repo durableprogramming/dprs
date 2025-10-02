@@ -1,18 +1,18 @@
 // The library module for DPRS (Docker Process Management TUI).
 //
-// Exports modules:
+// This library is structured with shared modules that can be used by both
+// dprs (Docker Process Manager) and dplw (Docker Process Log Watcher) applications:
 //
-// - app: Defines application state and actions for container operations
-// - display: Provides UI components for rendering the terminal interface
-// - docker_log_watcher: Implements real-time log monitoring for Docker containers
-// - log_view: Manages log display and scrolling functionality
+// - shared: Common functionality used by both applications
+// - dprs: Specific functionality for the container management TUI
+// - dplw: Specific functionality for the log watching TUI
 //
-// These components work together to create a full-featured terminal interface
-// for managing Docker containers and viewing their logs.
+// The shared modules include Docker integration, input handling, display components,
+// and configuration management. This structure promotes code reuse while keeping
+// application-specific logic separate.
 
-pub mod app;
-pub mod display;
-pub mod docker_log_watcher;
-pub mod log_view;
+pub mod shared;
+pub mod dprs;
+pub mod dplw;
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

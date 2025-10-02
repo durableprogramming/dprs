@@ -1,0 +1,7 @@
+---
+source: src/dprs/display/hotkey_bar/tests.rs
+expression: terminal.backend().to_string()
+---
+"┌Hotkeys───────────────────────────────────────────────────────────────────────────────────────────┐"
+"│q: Quit | j: Down | k: Up | c: Copy IP | o: Open in Browser | s: Stop Container | r: Restart | f: │"
+"└──────────────────────────────────────────────────────────────────────────────────────────────────┘"

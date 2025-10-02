@@ -4,7 +4,7 @@
 // This file contains the main application loop and UI rendering logic for dprs.
 
 use crossterm::{
-    event::{self, Event, KeyCode},
+    event::Event,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
@@ -17,9 +17,14 @@ use std::{
     time::{Duration, Instant},
 };
 
-use dprs::app::{actions, AppState};
-use dprs::display;
-use dprs::display::toast::ToastManager;
+use dprs::dprs::app::{actions, AppState};
+use dprs::dprs::commands::{CommandExecutor, CommandResult};
+use dprs::shared::config::Config;
+use dprs::dprs::display;
+use dprs::dprs::display::toast::ToastManager;
+use dprs::shared::input::input_watcher::InputWatcher;
+use dprs::dprs::modes::Mode;
+use tachyonfx::EffectManager;
 
 fn main() -> Result<(), io::Error> {
     // Setup terminal
@@ -28,11 +33,11 @@ fn main() -> Result<(), io::Error> {
     let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
-    // Create app state and toast manager
+    // Load configuration and create app state
+    let config = Config::load();
     let mut toast_manager = ToastManager::new();
 
-
-    let result = run_app(&mut terminal,  &mut toast_manager);
+    let result = run_app(&mut terminal, &mut toast_manager, config);
 
     // Restore terminal
     disable_raw_mode()?;
@@ -49,10 +54,19 @@ fn main() -> Result<(), io::Error> {
 fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
     toast_manager: &mut ToastManager,
+    config: Config,
 ) -> Result<(), io::Error> {
     let mut last_refresh = Instant::now();
-    let refresh_interval = Duration::from_millis(500); // Refresh every half second
+    let refresh_interval = if config.should_auto_refresh() {
+        config.auto_refresh_interval()
+    } else {
+        Duration::from_millis(500) // Default refresh interval
+    };
     let mut app_state = AppState::new();
+    let mut command_executor = CommandExecutor::new();
+    let input_watcher = InputWatcher::new();
+    let mut effects: EffectManager<()> = EffectManager::default();
+    let mut last_frame = Instant::now();
 
     // Initial load of containers
     if let Err(e) = app_state.refresh_containers() {
@@ -65,102 +79,26 @@ fn run_app<B: Backend>(
     }
 
     loop {
+        // Calculate elapsed time for effects
+        let elapsed = last_frame.elapsed();
+        last_frame = Instant::now();
+
+        // Update progress
+        app_state.update_progress();
+
         // Draw UI
-        terminal.draw(|f| display::draw::<B>(f, &mut app_state, &toast_manager))?;
+        terminal.draw(|f| display::draw::<B>(f, &mut app_state, &toast_manager, &config, &mut effects, elapsed))?;
 
         // Handle toast expiration
         toast_manager.check_expired();
 
-        // Determine polling timeout: either time until next refresh or a small default
-        let time_since_last_refresh = last_refresh.elapsed();
-        let poll_timeout = if time_since_last_refresh >= refresh_interval {
-            Duration::from_millis(0) // Refresh is due, poll non-blockingly
-        } else {
-            refresh_interval - time_since_last_refresh // Time remaining until next refresh
-        };
-
-        // Handle input events
-        if event::poll(poll_timeout)? {
-            if let Event::Key(key) = event::read()? {
-                // Handle filter mode input
-                if app_state.filter_mode {
-                    match key.code {
-                        KeyCode::Enter => {
-                            app_state.exit_filter_mode();
-                        }
-                        KeyCode::Esc => {
-                            app_state.exit_filter_mode();
-                            app_state.clear_filter();
-                        }
-                        KeyCode::Backspace => {
-                            let mut text = app_state.filter_text.clone();
-                            text.pop();
-                            app_state.update_filter(text);
-                        }
-                        KeyCode::Char(c) => {
-                            let mut text = app_state.filter_text.clone();
-                            text.push(c);
-                            app_state.update_filter(text);
-                        }
-                        _ => {}
-                    }
-                    continue;
-                }
-
-                // Handle normal mode input
-                match key.code {
-                    KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Char('j') | KeyCode::Down => app_state.next(),
-                    KeyCode::Char('k') | KeyCode::Up => app_state.previous(),
-                    KeyCode::Char('c') => match actions::copy_ip_address(&mut app_state) {
-                        Ok(_) => toast_manager.show("IP address copied to clipboard!", 2000),
-                        Err(e) => toast_manager.show(&format!("Error copying IP: {}", e), 3000),
-                    },
-                    KeyCode::Char('l') => match actions::open_browser(&mut app_state) {
-                        Ok(_) => toast_manager.show("Opening browser...", 2000),
-                        Err(e) => toast_manager.show(&format!("Error opening browser: {}", e), 3000),
-                    },
-                    KeyCode::Char('x') => match actions::stop_container(&mut app_state) {
-                        Ok(_) => {
-                            toast_manager.show("Stop command sent. Refreshing list...", 2000);
-                            // stop_container already calls load_containers
-                        }
-                        Err(e) => toast_manager.show(&format!("Error stopping container: {}", e), 3000),
-                    },
-                    KeyCode::Char('r') => { // Restart container
-                        match actions::restart_container(&mut app_state) {
-                            Ok(_) => {
-                                toast_manager.show("Restart command sent. Refreshing list...", 2000);
-                                // restart_container already calls load_containers
-                            }
-                            Err(e) => toast_manager.show(&format!("Error restarting container: {}", e), 3000),
-                        }
-                    }
-                    KeyCode::F(5) => { // Refresh container list
-                        match app_state.refresh_containers() {
-                            Ok(_) => toast_manager.show("Container list refreshed.", 2000),
-                            Err(e) => toast_manager.show(&format!("Error refreshing containers: {}", e), 3000),
-                        }
-                        last_refresh = Instant::now(); // Reset timer after manual refresh
-                    }
-                    KeyCode::Char('t') => { // Toggle tabular view
-                        app_state.tabular_mode = !app_state.tabular_mode;
-                        let mode_text = if app_state.tabular_mode { "tabular" } else { "normal" };
-                        toast_manager.show(&format!("Switched to {} view", mode_text), 1500);
-                    }
-                    KeyCode::Char('/') => { // Enter filter mode
-                        app_state.enter_filter_mode();
-                    }
-                    KeyCode::Esc => { // Clear filter when not in filter mode
-                        if !app_state.filter_text.is_empty() {
-                            app_state.clear_filter();
-                            toast_manager.show("Filter cleared", 1500);
-                        }
-                    }
-                    _ => {}
-                }
-            }
+        // Handle input events from watcher
+        if let Ok(Event::Key(key)) = input_watcher.try_recv() {
+            handle_key_event(key, &mut app_state, &mut command_executor, toast_manager, &config);
         }
+
+        // Small sleep to prevent busy waiting
+        std::thread::sleep(Duration::from_millis(10));
 
         // Periodic refresh check (if poll timed out or no event handled that resets the timer)
         if last_refresh.elapsed() >= refresh_interval {
@@ -170,6 +108,279 @@ fn run_app<B: Backend>(
             // No toast for successful auto-refresh to avoid being too noisy.
             last_refresh = Instant::now();
         }
+
+        // Check for exit request
+        if app_state.should_exit() {
+            return Ok(());
+        }
+    }
+}
+
+fn handle_key_event(
+    key: crossterm::event::KeyEvent,
+    app_state: &mut AppState,
+    command_executor: &mut CommandExecutor,
+    toast_manager: &mut ToastManager,
+    config: &Config,
+) {
+
+    match app_state.mode {
+        Mode::Normal => handle_normal_mode(key, app_state, toast_manager, config),
+        Mode::Visual => handle_visual_mode(key, app_state, toast_manager, config),
+        Mode::Command => handle_command_mode(key, app_state, command_executor, toast_manager),
+        Mode::Search => handle_search_mode(key, app_state, toast_manager),
+    }
+}
+
+
+
+fn handle_normal_mode(
+    key: crossterm::event::KeyEvent,
+    app_state: &mut AppState,
+    toast_manager: &mut ToastManager,
+    config: &Config,
+) {
+    use crossterm::event::{KeyCode, KeyModifiers};
+
+    match key.code {
+        // Quit
+        KeyCode::Char('q') => app_state.request_exit(),
+        
+        // Basic navigation
+        KeyCode::Char('j') | KeyCode::Down => app_state.next(),
+        KeyCode::Char('k') | KeyCode::Up => app_state.previous(),
+        
+        // Vim-style navigation
+        KeyCode::Char('g') => {
+            // Handle gg sequence - for simplicity, just go to first for now
+            app_state.go_to_first();
+        }
+        KeyCode::Char('G') => app_state.go_to_last(),
+        KeyCode::Char('w') => app_state.word_next(),
+        KeyCode::Char('b') => app_state.word_previous(),
+        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => app_state.half_page_up(),
+        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => app_state.half_page_down(),
+        
+        // Mode switching
+        KeyCode::Char('v') => app_state.enter_visual_mode(),
+        KeyCode::Char(':') => app_state.enter_command_mode(),
+        KeyCode::Char('/') => app_state.enter_search_mode(true),
+        KeyCode::Char('?') => app_state.enter_search_mode(false),
+        
+        // Search navigation
+        KeyCode::Char('n') => app_state.next_search_result(),
+        KeyCode::Char('N') => app_state.previous_search_result(),
+        
+        // Container actions
+        KeyCode::Char('s') => {
+            match actions::stop_container(app_state) {
+                Ok(_) => toast_manager.show("Stop command sent. Refreshing list...", 2000),
+                Err(e) => toast_manager.show(&format!("Error stopping container: {}", e), 3000),
+            }
+        }
+        KeyCode::Char('c') => {
+            match actions::copy_ip_address(app_state) {
+                Ok(_) => toast_manager.show("IP address copied to clipboard!", 2000),
+                Err(e) => toast_manager.show(&format!("Error copying IP: {}", e), 3000),
+            }
+        }
+        KeyCode::Char('o') => {
+            match actions::open_browser(app_state) {
+                Ok(_) => toast_manager.show("Opening browser...", 2000),
+                Err(e) => toast_manager.show(&format!("Error opening browser: {}", e), 3000),
+            }
+        }
+        KeyCode::Char('r') => {
+            match actions::restart_container(app_state, &config) {
+                Ok(_) => toast_manager.show("Restart command sent. Refreshing list...", 2000),
+                Err(e) => toast_manager.show(&format!("Error restarting container: {}", e), 3000),
+            }
+        }
+        KeyCode::Char('t') => {
+            app_state.tabular_mode = !app_state.tabular_mode;
+            let mode_text = if app_state.tabular_mode { "tabular" } else { "normal" };
+            toast_manager.show(&format!("Switched to {} view", mode_text), 1500);
+        }
+        
+        // Filter
+        KeyCode::Char('f') => app_state.enter_filter_mode(),
+        KeyCode::Esc => {
+            if !app_state.filter_text.is_empty() {
+                app_state.clear_filter();
+                toast_manager.show("Filter cleared", 1500);
+            } else if !app_state.search_state.matches.is_empty() {
+                app_state.search_state.clear();
+                toast_manager.show("Search cleared", 1500);
+            }
+        }
+        
+        // Legacy support for old filter mode
+        _ => {
+            if app_state.filter_mode {
+                handle_filter_input(key, app_state);
+            }
+        }
+    }
+}
+
+fn handle_visual_mode(
+    key: crossterm::event::KeyEvent,
+    app_state: &mut AppState,
+    toast_manager: &mut ToastManager,
+    config: &Config,
+) {
+    use crossterm::event::KeyCode;
+
+    match key.code {
+        KeyCode::Char('j') | KeyCode::Down => {
+            app_state.next();
+            if let Some(ref mut selection) = app_state.visual_selection {
+                if let Some(current) = app_state.list_state.selected() {
+                    selection.extend_to(current);
+                }
+            }
+        }
+        KeyCode::Char('k') | KeyCode::Up => {
+            app_state.previous();
+            if let Some(ref mut selection) = app_state.visual_selection {
+                if let Some(current) = app_state.list_state.selected() {
+                    selection.extend_to(current);
+                }
+            }
+        }
+        KeyCode::Char('G') => {
+            app_state.go_to_last();
+        }
+        KeyCode::Char('g') => {
+            app_state.go_to_first();
+        }
+        KeyCode::Char('s') => {
+            match actions::stop_selected_containers(app_state, config) {
+                Ok(_) => {
+                    let count = app_state.get_selected_indices().len();
+                    toast_manager.show(&format!("Stopped {} container{}", count, if count == 1 { "" } else { "s" }), 2000);
+                }
+                Err(e) => toast_manager.show(&format!("Error stopping containers: {}", e), 3000),
+            }
+            app_state.enter_normal_mode();
+        }
+        KeyCode::Char('r') => {
+            match actions::restart_selected_containers(app_state, config) {
+                Ok(_) => {
+                    let count = app_state.get_selected_indices().len();
+                    toast_manager.show(&format!("Restarted {} container{}", count, if count == 1 { "" } else { "s" }), 2000);
+                }
+                Err(e) => toast_manager.show(&format!("Error restarting containers: {}", e), 3000),
+            }
+            app_state.enter_normal_mode();
+        }
+        KeyCode::Esc => app_state.enter_normal_mode(),
+        _ => {}
+    }
+}
+
+fn handle_command_mode(
+    key: crossterm::event::KeyEvent,
+    app_state: &mut AppState,
+    command_executor: &mut CommandExecutor,
+    toast_manager: &mut ToastManager,
+) {
+    use crossterm::event::KeyCode;
+
+    match key.code {
+        KeyCode::Enter => {
+            let command = app_state.command_state.input.clone();
+            match command_executor.execute(&command, app_state) {
+                CommandResult::Success(msg) => {
+                    toast_manager.show(&msg, 2000);
+                    app_state.command_state.add_to_history(command);
+                }
+                CommandResult::Error(msg) => {
+                    toast_manager.show(&format!("Error: {}", msg), 3000);
+                }
+                CommandResult::Navigation(line) => {
+                    app_state.list_state.select(Some(line));
+                    app_state.table_state.select(Some(line));
+                    toast_manager.show(&format!("Jumped to line {}", line + 1), 1500);
+                }
+                CommandResult::Quit => {
+                    app_state.request_exit();
+                }
+            }
+            app_state.enter_normal_mode();
+        }
+        KeyCode::Esc => {
+            app_state.enter_normal_mode();
+        }
+        _ => {
+            app_state.command_state.handle_key(key);
+        }
+    }
+}
+
+fn handle_search_mode(
+    key: crossterm::event::KeyEvent,
+    app_state: &mut AppState,
+    toast_manager: &mut ToastManager,
+) {
+    use crossterm::event::KeyCode;
+
+    match key.code {
+        KeyCode::Enter => {
+            let query = app_state.search_state.query.clone();
+            app_state.perform_search(&query);
+            
+            let matches_count = app_state.search_state.matches.len();
+            if matches_count > 0 {
+                app_state.next_search_result();
+                toast_manager.show(&format!("Found {} matches", matches_count), 2000);
+            } else {
+                toast_manager.show("No matches found", 2000);
+            }
+            app_state.enter_normal_mode();
+        }
+        KeyCode::Esc => {
+            app_state.enter_normal_mode();
+        }
+        KeyCode::Char(c) => {
+            app_state.search_state.query.push(c);
+            // Perform incremental search
+            let query = app_state.search_state.query.clone();
+            app_state.perform_search(&query);
+        }
+        KeyCode::Backspace => {
+            app_state.search_state.query.pop();
+            let query = app_state.search_state.query.clone();
+            if !query.is_empty() {
+                app_state.perform_search(&query);
+            } else {
+                app_state.search_state.clear();
+            }
+        }
+        _ => {}
+    }
+}
+
+fn handle_filter_input(key: crossterm::event::KeyEvent, app_state: &mut AppState) {
+    use crossterm::event::KeyCode;
+
+    match key.code {
+        KeyCode::Enter => app_state.exit_filter_mode(),
+        KeyCode::Esc => {
+            app_state.exit_filter_mode();
+            app_state.clear_filter();
+        }
+        KeyCode::Backspace => {
+            let mut text = app_state.filter_text.clone();
+            text.pop();
+            app_state.update_filter(text);
+        }
+        KeyCode::Char(c) => {
+            let mut text = app_state.filter_text.clone();
+            text.push(c);
+            app_state.update_filter(text);
+        }
+        _ => {}
     }
 }
 
@@ -179,8 +390,8 @@ mod tests {
     #[test]
     fn basic_startup_test() {
         let result = std::panic::catch_unwind(|| {
-            let _app_state = dprs::app::AppState::new();
-            let _toast_manager = dprs::display::toast::ToastManager::new();
+            let _app_state = dprs::dprs::app::AppState::new();
+            let _toast_manager = dprs::dprs::display::toast::ToastManager::new();
         });
         assert!(result.is_ok());
     }
