@@ -28,8 +28,13 @@ use crate::dprs::display::toast::ToastManager;
 use crate::dprs::modes::Mode;
 use crate::shared::config::Config;
 
-pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: &ToastManager, config: &Config, effects: &mut EffectManager<()>, elapsed: std::time::Duration) {
+pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: &ToastManager, config: &mut Config, effects: &mut EffectManager<()>, elapsed: std::time::Duration) {
     let size = f.area();
+
+    // Clear the entire frame with the main background color
+    let background = Block::default()
+        .style(Style::default().bg(config.get_color("background_main")));
+    f.render_widget(background, size);
 
     // Calculate constraints based on what needs to be shown
     let mut constraints = vec![
@@ -49,14 +54,14 @@ pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: 
         .split(size);
 
     // Render the hotkey bar
-    render_hotkey_bar::<B>(f, chunks[0], config);
+    render_hotkey_bar::<B>(f, chunks[0], &*config);
 
     // Render container list (tabular or normal based on mode)
     let container_area = if app_state.tabular_mode {
-        render_container_table::<B>(f, app_state, chunks[1], config);
+        render_container_table::<B>(f, app_state, chunks[1], &*config);
         chunks[1]
     } else {
-        render_container_list::<B>(f, app_state, chunks[1], config);
+        render_container_list::<B>(f, app_state, chunks[1], &*config);
         chunks[1]
     };
 
@@ -66,7 +71,7 @@ pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: 
     }
 
     // Render status line
-    render_status_line::<B>(f, app_state, chunks[2], config);
+    render_status_line::<B>(f, app_state, chunks[2], &*config);
 
     // Render filter status or toast in additional bottom area
     if chunks.len() > 3 {
@@ -75,13 +80,13 @@ pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: 
                 app_state.filter_text,
                 app_state.get_displayed_container_count());
             let filter_widget = Paragraph::new(filter_status)
-                .style(Style::default().fg(config.get_color("yellow")))
+                .style(Style::default().fg(config.get_color("filter_text")).bg(config.get_color("background_dark")))
                 .block(Block::default().borders(Borders::ALL).title("Filter Status"));
 
             f.render_widget(filter_widget, chunks[3]);
         } else if let Some(toast) = toast_manager.get_toast() {
             let toast_widget = Paragraph::new(toast.message.clone())
-                .style(Style::default().fg(config.get_color("white")).bg(config.get_color("blue")))
+                .style(Style::default().fg(config.get_color("text_main")).bg(config.get_color("mode_command")))
                 .block(Block::default().borders(Borders::ALL).title("Notification"));
 
             f.render_widget(toast_widget, chunks[3]);
@@ -89,14 +94,14 @@ pub fn draw<B: Backend>(f: &mut Frame, app_state: &mut AppState, toast_manager: 
     }
 
     // Render filter input overlay if in filter mode
-    render_filter_input::<B>(f, app_state, size, config);
+    render_filter_input::<B>(f, app_state, size, &*config);
 
     // Render command line overlay if in command or search mode
-    render_command_line::<B>(f, app_state, size, config);
+    render_command_line::<B>(f, app_state, size, &*config);
 
     // Render progress modal if active and experimental animation flag is set
     if app_state.is_progress_active() && config.general.experimental_fx {
-        render_progress_modal::<B>(f, app_state, size, config, effects, elapsed);
+        render_progress_modal::<B>(f, app_state, size, &*config, effects, elapsed);
     }
 }
 
@@ -105,10 +110,10 @@ fn render_status_line<B: Backend>(f: &mut Frame, app_state: &AppState, area: rat
 
     // Mode indicator
     let mode_style = match app_state.mode {
-        Mode::Normal => Style::default().fg(config.get_color("green")),
-        Mode::Visual => Style::default().fg(config.get_color("yellow")),
-        Mode::Command => Style::default().fg(config.get_color("blue")),
-        Mode::Search => Style::default().fg(config.get_color("magenta")),
+        Mode::Normal => Style::default().fg(config.get_color("mode_normal")),
+        Mode::Visual => Style::default().fg(config.get_color("mode_visual")),
+        Mode::Command => Style::default().fg(config.get_color("mode_command")),
+        Mode::Search => Style::default().fg(config.get_color("mode_search")),
     };
     
     status_parts.push(format!("-- {} --", app_state.mode.display_name()));
@@ -143,8 +148,8 @@ fn render_status_line<B: Backend>(f: &mut Frame, app_state: &AppState, area: rat
 
     let status_text = status_parts.join(" | ");
     let status_widget = Paragraph::new(status_text)
-        .style(mode_style)
-        .block(Block::default().borders(Borders::ALL));
+        .style(mode_style.bg(config.get_color("background_dark")))
+        .block(Block::default().borders(Borders::ALL).style(Style::new().bg(config.get_color("background_dark"))));
 
     f.render_widget(status_widget, area);
 }
@@ -154,7 +159,7 @@ fn render_command_line<B: Backend>(f: &mut Frame, app_state: &AppState, area: ra
         Mode::Command => {
             let input_text = format!(":{}", app_state.command_state.input);
             let command_widget = Paragraph::new(input_text)
-                .style(Style::default().fg(config.get_color("white")).bg(config.get_color("blue")))
+                .style(Style::default().fg(config.get_color("text_main")).bg(config.get_color("mode_command")))
                 .block(Block::default().borders(Borders::ALL).title("Command"));
 
             let popup_area = ratatui::layout::Rect {
@@ -170,7 +175,7 @@ fn render_command_line<B: Backend>(f: &mut Frame, app_state: &AppState, area: ra
             let search_prefix = if app_state.search_state.is_forward { "/" } else { "?" };
             let input_text = format!("{}{}", search_prefix, app_state.search_state.query);
             let search_widget = Paragraph::new(input_text)
-                .style(Style::default().fg(config.get_color("white")).bg(config.get_color("magenta")))
+                .style(Style::default().fg(config.get_color("text_main")).bg(config.get_color("mode_search")))
                 .block(Block::default().borders(Borders::ALL).title("Search"));
 
             let popup_area = ratatui::layout::Rect {
@@ -201,7 +206,7 @@ fn render_progress_modal<B: Backend>(f: &mut Frame, app_state: &AppState, area: 
 
     // Clear the entire screen with a dark overlay to prevent background bleed
     let overlay = Block::default()
-        .style(Style::default().bg(config.get_color("black")));
+        .style(Style::default().bg(config.get_color("background_main")));
     f.render_widget(overlay, area);
 
     // Force clear the buffer in the modal area to prevent ghosting
@@ -209,7 +214,7 @@ fn render_progress_modal<B: Backend>(f: &mut Frame, app_state: &AppState, area: 
         for x_pos in modal_area.x..modal_area.x + modal_area.width {
             if let Some(cell) = f.buffer_mut().cell_mut((x_pos, y_pos)) {
                 cell.set_char(' ');
-                cell.set_bg(config.get_color("dark_blue_gray"));
+                cell.set_bg(config.get_color("background_dark"));
             }
         }
     }
@@ -228,13 +233,13 @@ fn render_progress_modal<B: Backend>(f: &mut Frame, app_state: &AppState, area: 
     // Render modal background with border
     let modal_block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(config.get_color("cyan")))
-        .style(Style::default().bg(config.get_color("dark_blue_gray")));
+        .border_style(Style::default().fg(config.get_color("border_main")))
+        .style(Style::default().bg(config.get_color("background_dark")));
     f.render_widget(modal_block, modal_area);
 
     // Title bar
     let title = Paragraph::new("Operation in Progress")
-        .style(Style::default().fg(config.get_color("cyan")).bg(config.get_color("dark_blue_gray")))
+        .style(Style::default().fg(config.get_color("border_main")).bg(config.get_color("background_dark")))
         .block(Block::default());
     f.render_widget(title, inner_chunks[0]);
 
@@ -249,8 +254,8 @@ fn render_progress_modal<B: Backend>(f: &mut Frame, app_state: &AppState, area: 
     // Render indeterminate progress bar background
     let progress_block = Block::default()
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(config.get_color("light_cyan")))
-        .style(Style::default().bg(config.get_color("dark_gray_blue")));
+        .border_style(Style::default().fg(config.get_color("border_light")))
+        .style(Style::default().bg(config.get_color("background_alt")));
     f.render_widget(progress_block, gauge_area);
 
     // Status message with padding
@@ -261,7 +266,7 @@ fn render_progress_modal<B: Backend>(f: &mut Frame, app_state: &AppState, area: 
         height: inner_chunks[2].height,
     };
     let status_msg = Paragraph::new(app_state.progress_modal.message.as_str())
-        .style(Style::default().fg(config.get_color("white")).bg(config.get_color("dark_blue_gray")))
+        .style(Style::default().fg(config.get_color("text_main")).bg(config.get_color("background_dark")))
         .block(Block::default());
     f.render_widget(status_msg, status_area);
 

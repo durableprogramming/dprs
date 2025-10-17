@@ -12,8 +12,9 @@ use std::process::Command;
 pub enum CommandResult {
     Success(String),
     Error(String),
-    Navigation(usize), 
+    Navigation(usize),
     Quit,
+    ConfigReload(crate::shared::config::Config),
 }
 
 pub struct CommandExecutor {
@@ -80,6 +81,7 @@ impl CommandExecutor {
                 }
             }
             "set" => self.execute_set_command(args, app_state),
+            "reload" | "config" => self.execute_reload_command(),
             _ => CommandResult::Error(format!("Unknown command: {}", cmd)),
         }
     }
@@ -222,6 +224,12 @@ impl CommandExecutor {
                 CommandResult::Success("Tabular mode settings not yet implemented".to_string())
             }
             _ => CommandResult::Error(format!("Unknown setting: {}", args[0])),
+        }
+    }
+
+    fn execute_reload_command(&self) -> CommandResult {
+        match crate::shared::config::Config::load() {
+            config => CommandResult::ConfigReload(config),
         }
     }
 

@@ -31,13 +31,13 @@ pub fn render_filter_input<B: Backend>(f: &mut Frame, app_state: &AppState, area
     f.render_widget(Clear, popup_area);
     
     let input_widget = Paragraph::new(app_state.filter_text.as_str())
-        .style(Style::default().fg(config.get_color("yellow")))
+        .style(Style::default().fg(config.get_color("filter_text")).bg(config.get_color("background_dark")))
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .title("Filter")
                 .title_alignment(Alignment::Center)
-                .style(Style::default().fg(config.get_color("blue"))),
+                .style(Style::default().fg(config.get_color("filter_cursor")).bg(config.get_color("background_dark"))),
         );
 
     f.render_widget(input_widget, popup_area);

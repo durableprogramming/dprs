@@ -21,7 +21,7 @@ pub fn render_container_table<B: Backend>(f: &mut Frame, app_state: &mut AppStat
     // Define table headers
     let header_cells = ["Name", "Image", "Status", "IP Address", "Ports"]
         .iter()
-        .map(|h| Cell::from(*h).style(Style::default().fg(config.get_color("message_warning")).add_modifier(Modifier::BOLD)));
+        .map(|h| Cell::from(*h).style(Style::default().bg(config.get_color("background_table")).fg(config.get_color("message_warning")).add_modifier(Modifier::BOLD)));
     let header = Row::new(header_cells)
         .style(Style::default().bg(config.get_color("background_table")))
         .height(1)
@@ -31,11 +31,11 @@ pub fn render_container_table<B: Backend>(f: &mut Frame, app_state: &mut AppStat
     let displayed_containers = app_state.get_displayed_containers();
     let rows = displayed_containers.iter().map(|container| {
         let cells = vec![
-            Cell::from(container.name.clone()).style(Style::default().fg(config.get_color("container_name"))),
-            Cell::from(container.image.clone()).style(Style::default().fg(config.get_color("container_image_tabular"))),
-            Cell::from(container.status.clone()).style(Style::default().fg(config.get_color("container_status_tabular"))),
-            Cell::from(container.ip_address.clone()).style(Style::default().fg(config.get_color("container_ip_tabular"))),
-            Cell::from(container.ports.clone()).style(Style::default().fg(config.get_color("container_ports_tabular"))),
+            Cell::from(container.name.clone()).style(Style::default().bg(config.get_color("background_very_dark")).fg(config.get_color("container_name"))),
+            Cell::from(container.image.clone()).style(Style::default().bg(config.get_color("background_very_dark")).fg(config.get_color("container_image_tabular"))),
+            Cell::from(container.status.clone()).style(Style::default().bg(config.get_color("background_very_dark")).fg(config.get_color("container_status_tabular"))),
+            Cell::from(container.ip_address.clone()).style(Style::default().bg(config.get_color("background_very_dark")).fg(config.get_color("container_ip_tabular"))),
+            Cell::from(container.ports.clone()).style(Style::default().bg(config.get_color("background_very_dark")).fg(config.get_color("container_ports_tabular"))),
         ];
         Row::new(cells).height(1).bottom_margin(0)
     });

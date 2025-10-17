@@ -100,41 +100,41 @@ pub fn run_app<B: Backend>(
             let help_text = vec![
                 Span::styled(
                     "q/Ctrl+C",
-                    Style::default().fg(config.get_color("red")).add_modifier(Modifier::BOLD),
+                    Style::default().fg(config.get_color("message_error")).add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(": Quit | "),
                 Span::styled(
                     "←/→",
                     Style::default()
-                        .fg(config.get_color("yellow"))
+                        .fg(config.get_color("message_warning"))
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(": Switch Container | "),
                 Span::styled(
                     "↑/↓",
                     Style::default()
-                        .fg(config.get_color("yellow"))
+                        .fg(config.get_color("message_warning"))
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(": Scroll | "),
                 Span::styled(
                     "PgUp/PgDn",
                     Style::default()
-                        .fg(config.get_color("yellow"))
+                        .fg(config.get_color("message_warning"))
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(": Page Scroll | "),
                 Span::styled(
                     "Esc",
                     Style::default()
-                        .fg(config.get_color("green"))
+                        .fg(config.get_color("message_success"))
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(": Follow | "),
                 Span::styled(
                     "r",
                     Style::default()
-                        .fg(config.get_color("green"))
+                        .fg(config.get_color("message_success"))
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(": Refresh"),

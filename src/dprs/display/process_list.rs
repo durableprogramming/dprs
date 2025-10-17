@@ -31,7 +31,7 @@ pub fn render_container_list<B: Backend>(f: &mut Frame, app_state: &mut AppState
             // Check if this container matches current search
             let is_search_match = app_state.search_state.matches.contains(&index);
 
-            let mut base_style = Style::default();
+            let mut base_style = Style::default().bg(config.get_color("background_main"));
             if is_visual_selected {
                 base_style = base_style.bg(config.get_color("background_selection_orange")); // Orange background for selection
             }
@@ -87,7 +87,7 @@ pub fn render_container_list<B: Backend>(f: &mut Frame, app_state: &mut AppState
         )
         .highlight_style(
             Style::default()
-                .bg(config.get_color("background_alt_dark"))
+                .bg(config.get_color("selected_bg"))
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol(">> ");

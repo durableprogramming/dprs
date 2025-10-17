@@ -38,7 +38,7 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
     if let Some(key) = get_key_for_action(config, "Quit", "normal") {
         help_text.push(Span::styled(
             key,
-            Style::default().fg(config.get_color("red")).add_modifier(Modifier::BOLD),
+            Style::default().bg(config.get_color("background_dark")).fg(config.get_color("hotkey_red")).add_modifier(Modifier::BOLD),
         ));
         help_text.push(Span::raw(": Quit | "));
     }
@@ -48,7 +48,8 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
         help_text.push(Span::styled(
             key,
             Style::default()
-                .fg(config.get_color("yellow"))
+                .bg(config.get_color("background_dark"))
+                .fg(config.get_color("hotkey_yellow"))
                 .add_modifier(Modifier::BOLD),
         ));
         help_text.push(Span::raw(": Down | "));
@@ -58,7 +59,8 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
         help_text.push(Span::styled(
             key,
             Style::default()
-                .fg(config.get_color("yellow"))
+                .bg(config.get_color("background_dark"))
+                .fg(config.get_color("hotkey_yellow"))
                 .add_modifier(Modifier::BOLD),
         ));
         help_text.push(Span::raw(": Up | "));
@@ -69,7 +71,8 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
         help_text.push(Span::styled(
             key,
             Style::default()
-                .fg(config.get_color("green"))
+                .bg(config.get_color("background_dark"))
+                .fg(config.get_color("hotkey_green"))
                 .add_modifier(Modifier::BOLD),
         ));
         help_text.push(Span::raw(": Copy IP | "));
@@ -80,7 +83,8 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
         help_text.push(Span::styled(
             key,
             Style::default()
-                .fg(config.get_color("blue"))
+                .bg(config.get_color("background_dark"))
+                .fg(config.get_color("hotkey_blue"))
                 .add_modifier(Modifier::BOLD),
         ));
         help_text.push(Span::raw(": Open in Browser | "));
@@ -91,7 +95,8 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
         help_text.push(Span::styled(
             key,
             Style::default()
-                .fg(config.get_color("magenta"))
+                .bg(config.get_color("background_dark"))
+                .fg(config.get_color("hotkey_magenta"))
                 .add_modifier(Modifier::BOLD),
         ));
         help_text.push(Span::raw(": Stop Container | "));
@@ -102,7 +107,8 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
         help_text.push(Span::styled(
             key,
             Style::default()
-                .fg(config.get_color("cyan"))
+                .bg(config.get_color("background_dark"))
+                .fg(config.get_color("hotkey_cyan"))
                 .add_modifier(Modifier::BOLD),
         ));
         help_text.push(Span::raw(": Restart | "));
@@ -113,7 +119,8 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
         help_text.push(Span::styled(
             key,
             Style::default()
-                .fg(config.get_color("light_blue"))
+                .bg(config.get_color("background_dark"))
+                .fg(config.get_color("hotkey_light_blue"))
                 .add_modifier(Modifier::BOLD),
         ));
         help_text.push(Span::raw(": Filter | "));
@@ -124,7 +131,8 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
         help_text.push(Span::styled(
             key,
             Style::default()
-                .fg(config.get_color("gray"))
+                .bg(config.get_color("background_dark"))
+                .fg(config.get_color("hotkey_gray"))
                 .add_modifier(Modifier::BOLD),
         ));
         help_text.push(Span::raw(": Clear Filter"));
@@ -133,8 +141,8 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
 
 
     let help = Paragraph::new(Line::from(help_text))
-        .style(Style::default())
-        .block(Block::default().borders(Borders::ALL).title("Hotkeys"));
+        .style(Style::default().bg(config.get_color("background_dark")))
+        .block(Block::default().borders(Borders::ALL).title("Hotkeys").style(Style::default().bg(config.get_color("background_dark"))));
 
     f.render_widget(help, area);
 }

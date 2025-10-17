@@ -119,62 +119,62 @@ impl Default for Config {
 
         let mut custom_colors = HashMap::new();
         // Selection and visual mode colors
-        custom_colors.insert("selected_bg".to_string(), "#2D4F67".to_string());
+        custom_colors.insert("selected_bg".to_string(), "#4a4af7".to_string());
         custom_colors.insert("visual_bg".to_string(), "#5D2F00".to_string());
         custom_colors.insert("search_highlight".to_string(), "#4D2D5F".to_string());
 
         // Container/process list colors
-        custom_colors.insert("container_name".to_string(), "#00FF00".to_string());
-        custom_colors.insert("container_image".to_string(), "#FFFF00".to_string());
-        custom_colors.insert("container_status".to_string(), "#00FFFF".to_string());
-        custom_colors.insert("container_ip".to_string(), "#0000FF".to_string());
-        custom_colors.insert("container_ports".to_string(), "#FF00FF".to_string());
+        custom_colors.insert("container_name".to_string(), "#00AA00".to_string());
+        custom_colors.insert("container_image".to_string(), "#AAAA00".to_string());
+        custom_colors.insert("container_status".to_string(), "#00AAAA".to_string());
+        custom_colors.insert("container_ip".to_string(), "#0000AA".to_string());
+        custom_colors.insert("container_ports".to_string(), "#AA00AA".to_string());
 
         // Tabular view specific colors
-        custom_colors.insert("container_image_tabular".to_string(), "#00FFFF".to_string());
-        custom_colors.insert("container_status_tabular".to_string(), "#0000FF".to_string());
-        custom_colors.insert("container_ip_tabular".to_string(), "#FF00FF".to_string());
-        custom_colors.insert("container_ports_tabular".to_string(), "#FFFFFF".to_string());
+        custom_colors.insert("container_image_tabular".to_string(), "#00AAAA".to_string());
+        custom_colors.insert("container_status_tabular".to_string(), "#0000AA".to_string());
+        custom_colors.insert("container_ip_tabular".to_string(), "#AA00AA".to_string());
+        custom_colors.insert("container_ports_tabular".to_string(), "#CCCCCC".to_string());
 
         // Mode indicator colors
-        custom_colors.insert("mode_normal".to_string(), "#00FF00".to_string());
-        custom_colors.insert("mode_visual".to_string(), "#FFFF00".to_string());
-        custom_colors.insert("mode_command".to_string(), "#0000FF".to_string());
-        custom_colors.insert("mode_search".to_string(), "#FF00FF".to_string());
+        custom_colors.insert("mode_normal".to_string(), "#00AA00".to_string());
+        custom_colors.insert("mode_visual".to_string(), "#AAAA00".to_string());
+        custom_colors.insert("mode_command".to_string(), "#0000AA".to_string());
+        custom_colors.insert("mode_search".to_string(), "#AA00AA".to_string());
 
         // Hotkey colors
-        custom_colors.insert("hotkey_red".to_string(), "#FF0000".to_string());
-        custom_colors.insert("hotkey_yellow".to_string(), "#FFFF00".to_string());
-        custom_colors.insert("hotkey_green".to_string(), "#00FF00".to_string());
-        custom_colors.insert("hotkey_blue".to_string(), "#0000FF".to_string());
-        custom_colors.insert("hotkey_magenta".to_string(), "#FF00FF".to_string());
-        custom_colors.insert("hotkey_cyan".to_string(), "#00FFFF".to_string());
-        custom_colors.insert("hotkey_white".to_string(), "#FFFFFF".to_string());
-        custom_colors.insert("hotkey_gray".to_string(), "#808080".to_string());
-        custom_colors.insert("hotkey_light_blue".to_string(), "#ADD8E6".to_string());
+        custom_colors.insert("hotkey_red".to_string(), "#AA0000".to_string());
+        custom_colors.insert("hotkey_yellow".to_string(), "#AAAA00".to_string());
+        custom_colors.insert("hotkey_green".to_string(), "#00AA00".to_string());
+        custom_colors.insert("hotkey_blue".to_string(), "#0000AA".to_string());
+        custom_colors.insert("hotkey_magenta".to_string(), "#AA00AA".to_string());
+        custom_colors.insert("hotkey_cyan".to_string(), "#00AAAA".to_string());
+        custom_colors.insert("hotkey_white".to_string(), "#CCCCCC".to_string());
+        custom_colors.insert("hotkey_gray".to_string(), "#666666".to_string());
+        custom_colors.insert("hotkey_light_blue".to_string(), "#6699CC".to_string());
 
         // Background colors
         custom_colors.insert("background_main".to_string(), "#000000".to_string());
-        custom_colors.insert("background_dark".to_string(), "#19272D".to_string());
-        custom_colors.insert("background_table".to_string(), "#1E1E3C".to_string());
-        custom_colors.insert("background_selection".to_string(), "#282850".to_string());
-        custom_colors.insert("background_alt".to_string(), "#28323C".to_string());
-        custom_colors.insert("background_selection_orange".to_string(), "#402000".to_string());
-        custom_colors.insert("background_very_dark".to_string(), "#080820".to_string());
-        custom_colors.insert("background_alt_dark".to_string(), "#0F2030".to_string());
+        custom_colors.insert("background_dark".to_string(), "#0F0F0F".to_string());
+        custom_colors.insert("background_table".to_string(), "#0F0F0F".to_string());
+        custom_colors.insert("background_selection".to_string(), "#1F1F1F".to_string());
+        custom_colors.insert("background_alt".to_string(), "#0F0F0F".to_string());
+        custom_colors.insert("background_selection_orange".to_string(), "#2F1F0F".to_string());
+        custom_colors.insert("background_very_dark".to_string(), "#0A0A0A".to_string());
+        custom_colors.insert("background_alt_dark".to_string(), "#0A0A0A".to_string());
 
         // Border colors
-        custom_colors.insert("border_main".to_string(), "#00FFFF".to_string());
-        custom_colors.insert("border_light".to_string(), "#64C8FF".to_string());
+        custom_colors.insert("border_main".to_string(), "#00AAAA".to_string());
+        custom_colors.insert("border_light".to_string(), "#4A9EFF".to_string());
 
         // Text colors
         custom_colors.insert("text_selection".to_string(), "#8080FF".to_string());
         custom_colors.insert("text_main".to_string(), "#FFFFFF".to_string());
 
         // Message colors
-        custom_colors.insert("message_error".to_string(), "#FF0000".to_string());
-        custom_colors.insert("message_warning".to_string(), "#FFFF00".to_string());
-        custom_colors.insert("message_success".to_string(), "#00FF00".to_string());
+        custom_colors.insert("message_error".to_string(), "#AA0000".to_string());
+        custom_colors.insert("message_warning".to_string(), "#AAAA00".to_string());
+        custom_colors.insert("message_success".to_string(), "#00AA00".to_string());
 
         // Filter colors
         custom_colors.insert("filter_text".to_string(), "#FFFF00".to_string());
@@ -215,11 +215,18 @@ impl Default for Config {
 impl Config {
     pub fn load() -> Self {
         let config_path = Self::config_file_path();
-        
+
         match fs::read_to_string(&config_path) {
             Ok(content) => {
-                match toml::from_str(&content) {
-                    Ok(config) => config,
+                match toml::from_str::<Config>(&content) {
+                    Ok(mut config) => {
+                        // Merge default colors with loaded colors
+                        let default_config = Self::default();
+                        for (key, value) in default_config.colors.custom_colors {
+                            config.colors.custom_colors.entry(key).or_insert(value);
+                        }
+                        config
+                    }
                     Err(e) => {
                         eprintln!("Error parsing config file {:?}: {}", config_path, e);
                         eprintln!("Using default configuration");
@@ -332,6 +339,30 @@ pub fn key_event_to_string(key: crossterm::event::KeyEvent) -> String {
     }
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hex_to_color() {
+        assert_eq!(Config::hex_to_color("#000000"), Some(Color::Rgb(0, 0, 0)));
+        assert_eq!(Config::hex_to_color("#FfFfFF"), Some(Color::Rgb(255, 255, 255)));
+        assert_eq!(Config::hex_to_color("#fF0000"), Some(Color::Rgb(255, 0, 0)));
+        assert_eq!(Config::hex_to_color("invalid"), None);
+        assert_eq!(Config::hex_to_color("#12345"), None); // Too short
+        assert_eq!(Config::hex_to_color("#1234567"), None); // Too long
+    }
+
+    #[test]
+    fn test_get_color_with_defaults() {
+        let config = Config::default();
+        // Should return black for background_main
+        assert_eq!(config.get_color("background_main"), Color::Rgb(0, 0, 0));
+        // Should return white for unknown color
+        assert_eq!(config.get_color("unknown_color"), Color::White);
+    }
 }
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

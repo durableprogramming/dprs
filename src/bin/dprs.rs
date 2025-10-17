@@ -54,7 +54,7 @@ fn main() -> Result<(), io::Error> {
 fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
     toast_manager: &mut ToastManager,
-    config: Config,
+    mut config: Config,
 ) -> Result<(), io::Error> {
     let mut last_refresh = Instant::now();
     let refresh_interval = if config.should_auto_refresh() {
@@ -87,14 +87,14 @@ fn run_app<B: Backend>(
         app_state.update_progress();
 
         // Draw UI
-        terminal.draw(|f| display::draw::<B>(f, &mut app_state, &toast_manager, &config, &mut effects, elapsed))?;
+        terminal.draw(|f| display::draw::<B>(f, &mut app_state, &toast_manager, &mut config, &mut effects, elapsed))?;
 
         // Handle toast expiration
         toast_manager.check_expired();
 
         // Handle input events from watcher
         if let Ok(Event::Key(key)) = input_watcher.try_recv() {
-            handle_key_event(key, &mut app_state, &mut command_executor, toast_manager, &config);
+            handle_key_event(key, &mut app_state, &mut command_executor, toast_manager, &mut config);
         }
 
         // Small sleep to prevent busy waiting
@@ -121,13 +121,13 @@ fn handle_key_event(
     app_state: &mut AppState,
     command_executor: &mut CommandExecutor,
     toast_manager: &mut ToastManager,
-    config: &Config,
+    config: &mut Config,
 ) {
 
     match app_state.mode {
         Mode::Normal => handle_normal_mode(key, app_state, toast_manager, config),
         Mode::Visual => handle_visual_mode(key, app_state, toast_manager, config),
-        Mode::Command => handle_command_mode(key, app_state, command_executor, toast_manager),
+        Mode::Command => handle_command_mode(key, app_state, command_executor, toast_manager, config),
         Mode::Search => handle_search_mode(key, app_state, toast_manager),
     }
 }
@@ -138,7 +138,7 @@ fn handle_normal_mode(
     key: crossterm::event::KeyEvent,
     app_state: &mut AppState,
     toast_manager: &mut ToastManager,
-    config: &Config,
+    config: &mut Config,
 ) {
     use crossterm::event::{KeyCode, KeyModifiers};
 
@@ -191,7 +191,7 @@ fn handle_normal_mode(
             }
         }
         KeyCode::Char('r') => {
-            match actions::restart_container(app_state, &config) {
+            match actions::restart_container(app_state, &*config) {
                 Ok(_) => toast_manager.show("Restart command sent. Refreshing list...", 2000),
                 Err(e) => toast_manager.show(&format!("Error restarting container: {}", e), 3000),
             }
@@ -227,7 +227,7 @@ fn handle_visual_mode(
     key: crossterm::event::KeyEvent,
     app_state: &mut AppState,
     toast_manager: &mut ToastManager,
-    config: &Config,
+    config: &mut Config,
 ) {
     use crossterm::event::KeyCode;
 
@@ -255,7 +255,7 @@ fn handle_visual_mode(
             app_state.go_to_first();
         }
         KeyCode::Char('s') => {
-            match actions::stop_selected_containers(app_state, config) {
+            match actions::stop_selected_containers(app_state, &*config) {
                 Ok(_) => {
                     let count = app_state.get_selected_indices().len();
                     toast_manager.show(&format!("Stopped {} container{}", count, if count == 1 { "" } else { "s" }), 2000);
@@ -265,7 +265,7 @@ fn handle_visual_mode(
             app_state.enter_normal_mode();
         }
         KeyCode::Char('r') => {
-            match actions::restart_selected_containers(app_state, config) {
+            match actions::restart_selected_containers(app_state, &*config) {
                 Ok(_) => {
                     let count = app_state.get_selected_indices().len();
                     toast_manager.show(&format!("Restarted {} container{}", count, if count == 1 { "" } else { "s" }), 2000);
@@ -284,6 +284,7 @@ fn handle_command_mode(
     app_state: &mut AppState,
     command_executor: &mut CommandExecutor,
     toast_manager: &mut ToastManager,
+    config: &mut Config,
 ) {
     use crossterm::event::KeyCode;
 
@@ -305,6 +306,11 @@ fn handle_command_mode(
                 }
                 CommandResult::Quit => {
                     app_state.request_exit();
+                }
+                CommandResult::ConfigReload(new_config) => {
+                    *config = new_config;
+                    toast_manager.show("Configuration reloaded", 2000);
+                    app_state.command_state.add_to_history(command);
                 }
             }
             app_state.enter_normal_mode();

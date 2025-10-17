@@ -52,7 +52,7 @@ pub fn render_log_tabs<B: Backend>(f: &mut Frame, log_tabs: &LogTabs, area: Rect
     let titles: Vec<Line> = log_tabs
         .titles
         .iter()
-        .map(|t| Line::from(vec![Span::styled(t, Style::default().fg(config.get_color("white")))]))
+        .map(|t| Line::from(vec![Span::styled(t, Style::default().bg(config.get_color("background_main")).fg(config.get_color("text_main")))]))
         .collect();
 
     let tabs = Tabs::new(titles)
@@ -63,10 +63,11 @@ pub fn render_log_tabs<B: Backend>(f: &mut Frame, log_tabs: &LogTabs, area: Rect
                 .border_type(BorderType::Rounded),
         )
         .select(log_tabs.index)
-        .style(Style::default().fg(config.get_color("white")))
+        .style(Style::default().bg(config.get_color("background_main")).fg(config.get_color("text_main")))
         .highlight_style(
             Style::default()
-                .fg(config.get_color("yellow"))
+                .bg(config.get_color("background_main"))
+                .fg(config.get_color("message_warning"))
                 .add_modifier(Modifier::BOLD),
         );
 

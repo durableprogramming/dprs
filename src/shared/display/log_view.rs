@@ -142,12 +142,12 @@ fn parse_log_with_tailspin<'a>(message: &'a str, config: &'a Config) -> Vec<Span
                 line.spans.clone()
             } else {
                 // Fallback to plain text if conversion fails
-                vec![Span::styled(message, Style::default().fg(config.get_color("white")))]
+                vec![Span::styled(message, Style::default().bg(config.get_color("background_main")).fg(config.get_color("text_main")))]
             }
         }
         Err(_) => {
             // Fallback to plain text if conversion fails
-            vec![Span::styled(message, Style::default().fg(config.get_color("white")))]
+            vec![Span::styled(message, Style::default().bg(config.get_color("background_main")).fg(config.get_color("text_main")))]
         }
     }
 }
@@ -175,7 +175,7 @@ pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &LogView, area: Rect
                 .borders(Borders::ALL)
                 .title(format!("Logs ({})", current_position)),
         )
-        .style(Style::default())
+        .style(Style::default().bg(config.get_color("background_main")))
         .wrap(Wrap { trim: false })
         .scroll((log_view.scroll_position as u16, 0));
 
