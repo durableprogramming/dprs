@@ -5,6 +5,7 @@
 // a render function that displays the tabs at the top of the log viewer
 // with proper styling and highlighting of the currently selected container.
 
+use crate::shared::config::Config;
 use ratatui::{
     backend::Backend,
     layout::Rect,
@@ -13,7 +14,6 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Tabs},
     Frame,
 };
-use crate::shared::config::Config;
 
 pub struct LogTabs {
     pub titles: Vec<String>,
@@ -52,7 +52,14 @@ pub fn render_log_tabs<B: Backend>(f: &mut Frame, log_tabs: &LogTabs, area: Rect
     let titles: Vec<Line> = log_tabs
         .titles
         .iter()
-        .map(|t| Line::from(vec![Span::styled(t, Style::default().bg(config.get_color("background_main")).fg(config.get_color("text_main")))]))
+        .map(|t| {
+            Line::from(vec![Span::styled(
+                t,
+                Style::default()
+                    .bg(config.get_color("background_main"))
+                    .fg(config.get_color("text_main")),
+            )])
+        })
         .collect();
 
     let tabs = Tabs::new(titles)
@@ -63,7 +70,11 @@ pub fn render_log_tabs<B: Backend>(f: &mut Frame, log_tabs: &LogTabs, area: Rect
                 .border_type(BorderType::Rounded),
         )
         .select(log_tabs.index)
-        .style(Style::default().bg(config.get_color("background_main")).fg(config.get_color("text_main")))
+        .style(
+            Style::default()
+                .bg(config.get_color("background_main"))
+                .fg(config.get_color("text_main")),
+        )
         .highlight_style(
             Style::default()
                 .bg(config.get_color("background_main"))
@@ -73,7 +84,5 @@ pub fn render_log_tabs<B: Backend>(f: &mut Frame, log_tabs: &LogTabs, area: Rect
 
     f.render_widget(tabs, area);
 }
-
-
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

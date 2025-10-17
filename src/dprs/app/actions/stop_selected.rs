@@ -4,11 +4,11 @@
 // it automatically reloads the container list to reflect the current state.
 
 use crate::dprs::app::state_machine::{AppState, ProgressUpdate};
+use crate::shared::config::Config;
 use std::process::Command;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::Duration;
-use crate::shared::config::Config;
 
 pub fn stop_selected_containers(app_state: &mut AppState, config: &Config) -> Result<(), String> {
     let selected_indices = app_state.get_selected_indices();
@@ -37,7 +37,10 @@ pub fn stop_selected_containers(app_state: &mut AppState, config: &Config) -> Re
     Ok(())
 }
 
-fn stop_containers_async(container_names: Vec<String>, tx: Option<Sender<ProgressUpdate>>) -> Result<(), String> {
+fn stop_containers_async(
+    container_names: Vec<String>,
+    tx: Option<Sender<ProgressUpdate>>,
+) -> Result<(), String> {
     let total = container_names.len();
     let mut stopped = 0;
     let mut errors = Vec::new();
@@ -53,11 +56,7 @@ fn stop_containers_async(container_names: Vec<String>, tx: Option<Sender<Progres
 
         thread::sleep(Duration::from_millis(50));
 
-        match Command::new("docker")
-            .arg("stop")
-            .arg(&name)
-            .output()
-        {
+        match Command::new("docker").arg("stop").arg(&name).output() {
             Ok(output) => {
                 if output.status.success() {
                     stopped += 1;
@@ -83,9 +82,15 @@ fn stop_containers_async(container_names: Vec<String>, tx: Option<Sender<Progres
         Ok(())
     } else {
         if let Some(ref sender) = tx {
-            let _ = sender.send(ProgressUpdate::Error(format!("Some containers failed to stop: {}", errors.join(", "))));
+            let _ = sender.send(ProgressUpdate::Error(format!(
+                "Some containers failed to stop: {}",
+                errors.join(", ")
+            )));
         }
-        Err(format!("Some containers failed to stop: {}", errors.join(", ")))
+        Err(format!(
+            "Some containers failed to stop: {}",
+            errors.join(", ")
+        ))
     }
 }
 

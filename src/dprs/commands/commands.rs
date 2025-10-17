@@ -14,11 +14,17 @@ pub enum CommandResult {
     Error(String),
     Navigation(usize),
     Quit,
-    ConfigReload(crate::shared::config::Config),
+    ConfigReload(Box<crate::shared::config::Config>),
 }
 
 pub struct CommandExecutor {
     command_history: Vec<String>,
+}
+
+impl Default for CommandExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CommandExecutor {
@@ -30,7 +36,7 @@ impl CommandExecutor {
 
     pub fn execute(&mut self, command: &str, app_state: &mut AppState) -> CommandResult {
         let command = command.trim();
-        
+
         if command.is_empty() {
             return CommandResult::Error("Empty command".to_string());
         }
@@ -74,19 +80,22 @@ impl CommandExecutor {
             "logs" => self.execute_logs_command(args, app_state),
             "exec" => self.execute_exec_command(args, app_state),
             "inspect" => self.execute_inspect_command(args, app_state),
-            "ps" | "refresh" => {
-                match app_state.refresh_containers() {
-                    Ok(_) => CommandResult::Success("Containers refreshed".to_string()),
-                    Err(e) => CommandResult::Error(format!("Failed to refresh: {}", e)),
-                }
-            }
+            "ps" | "refresh" => match app_state.refresh_containers() {
+                Ok(_) => CommandResult::Success("Containers refreshed".to_string()),
+                Err(e) => CommandResult::Error(format!("Failed to refresh: {}", e)),
+            },
             "set" => self.execute_set_command(args, app_state),
             "reload" | "config" => self.execute_reload_command(),
             _ => CommandResult::Error(format!("Unknown command: {}", cmd)),
         }
     }
 
-    fn execute_container_command(&self, operation: &str, args: &[&str], app_state: &AppState) -> CommandResult {
+    fn execute_container_command(
+        &self,
+        operation: &str,
+        args: &[&str],
+        app_state: &AppState,
+    ) -> CommandResult {
         if args.is_empty() {
             // Use currently selected container
             if let Some(container) = app_state.get_selected_container() {
@@ -102,7 +111,7 @@ impl CommandExecutor {
 
         for arg in args {
             let matched_containers = self.resolve_container_spec(arg, &containers);
-            
+
             if matched_containers.is_empty() {
                 errors.push(format!("No containers found matching: {}", arg));
                 continue;
@@ -143,7 +152,7 @@ impl CommandExecutor {
         };
 
         match Command::new("docker")
-            .args(&["logs", "--tail", "100", &container_name])
+            .args(["logs", "--tail", "100", &container_name])
             .output()
         {
             Ok(output) => {
@@ -166,7 +175,7 @@ impl CommandExecutor {
 
         let containers = app_state.get_displayed_containers();
         let matched = self.resolve_container_spec(args[0], &containers);
-        
+
         if matched.is_empty() {
             return CommandResult::Error(format!("No container found matching: {}", args[0]));
         }
@@ -178,7 +187,10 @@ impl CommandExecutor {
             "/bin/bash".to_string()
         };
 
-        CommandResult::Success(format!("Would execute: docker exec -it {} {}", container_name, exec_cmd))
+        CommandResult::Success(format!(
+            "Would execute: docker exec -it {} {}",
+            container_name, exec_cmd
+        ))
     }
 
     fn execute_inspect_command(&self, args: &[&str], app_state: &AppState) -> CommandResult {
@@ -198,7 +210,7 @@ impl CommandExecutor {
         };
 
         match Command::new("docker")
-            .args(&["inspect", &container_name])
+            .args(["inspect", &container_name])
             .output()
         {
             Ok(output) => {
@@ -228,17 +240,17 @@ impl CommandExecutor {
     }
 
     fn execute_reload_command(&self) -> CommandResult {
-        match crate::shared::config::Config::load() {
-            config => CommandResult::ConfigReload(config),
-        }
+        let config = crate::shared::config::Config::load();
+        CommandResult::ConfigReload(Box::new(config))
     }
 
     fn resolve_container_spec(&self, spec: &str, containers: &[Container]) -> Vec<Container> {
         // Handle regex patterns (enclosed in //)
         if spec.starts_with('/') && spec.ends_with('/') && spec.len() > 2 {
-            let pattern = &spec[1..spec.len()-1];
+            let pattern = &spec[1..spec.len() - 1];
             if let Ok(re) = Regex::new(pattern) {
-                return containers.iter()
+                return containers
+                    .iter()
                     .filter(|c| re.is_match(&c.name) || re.is_match(&c.image))
                     .cloned()
                     .collect();
@@ -249,7 +261,8 @@ impl CommandExecutor {
         if spec.contains('*') || spec.contains('?') {
             let pattern = spec.replace('*', ".*").replace('?', ".");
             if let Ok(re) = Regex::new(&format!("^{}$", pattern)) {
-                return containers.iter()
+                return containers
+                    .iter()
                     .filter(|c| re.is_match(&c.name))
                     .cloned()
                     .collect();
@@ -257,7 +270,8 @@ impl CommandExecutor {
         }
 
         // Exact container name or ID match
-        containers.iter()
+        containers
+            .iter()
             .filter(|c| c.name == spec || c.name.starts_with(spec))
             .cloned()
             .collect()
@@ -265,7 +279,7 @@ impl CommandExecutor {
 
     fn docker_operation(&self, operation: &str, container_name: &str) -> CommandResult {
         match Command::new("docker")
-            .args(&[operation, container_name])
+            .args([operation, container_name])
             .output()
         {
             Ok(output) => {
@@ -273,10 +287,15 @@ impl CommandExecutor {
                     CommandResult::Success(format!("{} {}", operation, container_name))
                 } else {
                     let error = String::from_utf8_lossy(&output.stderr);
-                    CommandResult::Error(format!("Failed to {} {}: {}", operation, container_name, error))
+                    CommandResult::Error(format!(
+                        "Failed to {} {}: {}",
+                        operation, container_name, error
+                    ))
                 }
             }
-            Err(e) => CommandResult::Error(format!("Failed to execute docker {}: {}", operation, e)),
+            Err(e) => {
+                CommandResult::Error(format!("Failed to execute docker {}: {}", operation, e))
+            }
         }
     }
 

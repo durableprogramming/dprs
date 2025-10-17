@@ -20,7 +20,8 @@ pub fn copy_ip_address(app_state: &AppState) -> Result<(), String> {
 
     let mut ctx: ClipboardContext = ClipboardContext::new().unwrap();
 
-    ctx.set_contents(container.ip_address.clone().to_owned()).map_err(|e| format!("Failed to copy to clipboard: {}", e))?;
+    ctx.set_contents(container.ip_address.clone().to_owned())
+        .map_err(|e| format!("Failed to copy to clipboard: {}", e))?;
 
     Ok(())
 }

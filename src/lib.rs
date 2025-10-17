@@ -11,8 +11,8 @@
 // and configuration management. This structure promotes code reuse while keeping
 // application-specific logic separate.
 
-pub mod shared;
-pub mod dprs;
 pub mod dplw;
+pub mod dprs;
+pub mod shared;
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

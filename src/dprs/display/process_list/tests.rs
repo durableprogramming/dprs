@@ -35,7 +35,7 @@ fn test_container_list_render_with_containers() {
     let backend = TestBackend::new(100, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     let mut app_state = AppState::new();
-    
+
     // Add test containers
     app_state.containers = vec![
         Container {
@@ -69,7 +69,7 @@ fn test_container_list_with_selection() {
     let backend = TestBackend::new(100, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     let mut app_state = AppState::new();
-    
+
     // Add test containers
     app_state.containers = vec![
         Container {
@@ -87,7 +87,7 @@ fn test_container_list_with_selection() {
             ports: "5432/tcp".to_string(),
         },
     ];
-    
+
     // Set selection to second item
     app_state.list_state.select(Some(1));
     let config = Config::default();
@@ -106,17 +106,15 @@ fn test_container_list_styles() {
     let backend = TestBackend::new(100, 20);
     let mut terminal = Terminal::new(backend).unwrap();
     let mut app_state = AppState::new();
-    
+
     // Add a container with various fields to test styling
-    app_state.containers = vec![
-        Container {
-            name: "test-container".to_string(),
-            image: "test-image:latest".to_string(),
-            status: "Up 3 minutes".to_string(),
-            ip_address: "172.17.0.4".to_string(),
-            ports: "8080:80/tcp".to_string(),
-        },
-    ];
+    app_state.containers = vec![Container {
+        name: "test-container".to_string(),
+        image: "test-image:latest".to_string(),
+        status: "Up 3 minutes".to_string(),
+        ip_address: "172.17.0.4".to_string(),
+        ports: "8080:80/tcp".to_string(),
+    }];
     let config = Config::default();
 
     terminal
@@ -124,7 +122,7 @@ fn test_container_list_styles() {
             render_container_list::<TestBackend>(f, &mut app_state, f.area(), &config);
         })
         .unwrap();
-    
+
     // Verify output contains expected content
     let output = terminal.backend().to_string();
     assert!(output.contains("test-container"));
@@ -132,7 +130,7 @@ fn test_container_list_styles() {
     assert!(output.contains("Up 3 minutes"));
     assert!(output.contains("172.17.0.4"));
     assert!(output.contains("8080:80/tcp"));
-    
+
     assert_snapshot!(output);
 }
 

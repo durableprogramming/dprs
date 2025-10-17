@@ -3,12 +3,12 @@
 // and layout options. Configuration is stored in ~/.dprs/config and loaded
 // at startup with fallback to sensible defaults.
 
+use crossterm::event::{KeyCode, KeyModifiers};
+use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use crossterm::event::{KeyCode, KeyModifiers};
-use ratatui::style::Color;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -59,7 +59,7 @@ pub struct LayoutConfig {
 impl Default for Config {
     fn default() -> Self {
         let mut normal_mode = HashMap::new();
-        
+
         // Navigation
         normal_mode.insert("j".to_string(), "SelectNext".to_string());
         normal_mode.insert("k".to_string(), "SelectPrevious".to_string());
@@ -69,28 +69,28 @@ impl Default for Config {
         normal_mode.insert("b".to_string(), "WordPrevious".to_string());
         normal_mode.insert("Ctrl+u".to_string(), "HalfPageUp".to_string());
         normal_mode.insert("Ctrl+d".to_string(), "HalfPageDown".to_string());
-        
+
         // Mode switching
         normal_mode.insert("v".to_string(), "EnterVisualMode".to_string());
         normal_mode.insert(":".to_string(), "EnterCommandMode".to_string());
         normal_mode.insert("/".to_string(), "EnterSearchForward".to_string());
         normal_mode.insert("?".to_string(), "EnterSearchBackward".to_string());
-        
+
         // Search navigation
         normal_mode.insert("n".to_string(), "NextSearchResult".to_string());
         normal_mode.insert("N".to_string(), "PreviousSearchResult".to_string());
-        
+
         // Container actions
         normal_mode.insert("s".to_string(), "StopContainer".to_string());
         normal_mode.insert("r".to_string(), "RestartContainer".to_string());
         normal_mode.insert("c".to_string(), "CopyIp".to_string());
         normal_mode.insert("o".to_string(), "OpenBrowser".to_string());
         normal_mode.insert("t".to_string(), "ToggleTabular".to_string());
-        
+
         // Filter
         normal_mode.insert("f".to_string(), "EnterFilterMode".to_string());
         normal_mode.insert("Escape".to_string(), "ClearFilter".to_string());
-        
+
         // Quit
         normal_mode.insert("q".to_string(), "Quit".to_string());
 
@@ -132,7 +132,10 @@ impl Default for Config {
 
         // Tabular view specific colors
         custom_colors.insert("container_image_tabular".to_string(), "#00AAAA".to_string());
-        custom_colors.insert("container_status_tabular".to_string(), "#0000AA".to_string());
+        custom_colors.insert(
+            "container_status_tabular".to_string(),
+            "#0000AA".to_string(),
+        );
         custom_colors.insert("container_ip_tabular".to_string(), "#AA00AA".to_string());
         custom_colors.insert("container_ports_tabular".to_string(), "#CCCCCC".to_string());
 
@@ -159,7 +162,10 @@ impl Default for Config {
         custom_colors.insert("background_table".to_string(), "#0F0F0F".to_string());
         custom_colors.insert("background_selection".to_string(), "#1F1F1F".to_string());
         custom_colors.insert("background_alt".to_string(), "#0F0F0F".to_string());
-        custom_colors.insert("background_selection_orange".to_string(), "#2F1F0F".to_string());
+        custom_colors.insert(
+            "background_selection_orange".to_string(),
+            "#2F1F0F".to_string(),
+        );
         custom_colors.insert("background_very_dark".to_string(), "#0A0A0A".to_string());
         custom_colors.insert("background_alt_dark".to_string(), "#0A0A0A".to_string());
 
@@ -247,7 +253,7 @@ impl Config {
 
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config_path = Self::config_file_path();
-        
+
         // Ensure config directory exists
         if let Some(parent) = config_path.parent() {
             fs::create_dir_all(parent)?;
@@ -255,7 +261,7 @@ impl Config {
 
         let content = toml::to_string_pretty(self)?;
         fs::write(&config_path, content)?;
-        
+
         Ok(())
     }
 
@@ -274,7 +280,10 @@ impl Config {
             _ => return None,
         };
 
-        bindings.get(key).map(|s| s.as_str()).filter(|s| !s.is_empty())
+        bindings
+            .get(key)
+            .map(|s| s.as_str())
+            .filter(|s| !s.is_empty())
     }
 
     pub fn should_auto_refresh(&self) -> bool {
@@ -307,7 +316,7 @@ impl Config {
 
 pub fn key_event_to_string(key: crossterm::event::KeyEvent) -> String {
     let mut result = String::new();
-    
+
     if key.modifiers.contains(KeyModifiers::CONTROL) {
         result.push_str("Ctrl+");
     }
@@ -348,7 +357,10 @@ mod tests {
     #[test]
     fn test_hex_to_color() {
         assert_eq!(Config::hex_to_color("#000000"), Some(Color::Rgb(0, 0, 0)));
-        assert_eq!(Config::hex_to_color("#FfFfFF"), Some(Color::Rgb(255, 255, 255)));
+        assert_eq!(
+            Config::hex_to_color("#FfFfFF"),
+            Some(Color::Rgb(255, 255, 255))
+        );
         assert_eq!(Config::hex_to_color("#fF0000"), Some(Color::Rgb(255, 0, 0)));
         assert_eq!(Config::hex_to_color("invalid"), None);
         assert_eq!(Config::hex_to_color("#12345"), None); // Too short

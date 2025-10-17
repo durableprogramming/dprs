@@ -4,13 +4,16 @@
 // it automatically reloads the container list to reflect the current state.
 
 use crate::dprs::app::state_machine::{AppState, ProgressUpdate};
+use crate::shared::config::Config;
 use std::process::Command;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::Duration;
-use crate::shared::config::Config;
 
-pub fn restart_selected_containers(app_state: &mut AppState, config: &Config) -> Result<(), String> {
+pub fn restart_selected_containers(
+    app_state: &mut AppState,
+    config: &Config,
+) -> Result<(), String> {
     let selected_indices = app_state.get_selected_indices();
 
     if selected_indices.is_empty() {
@@ -25,7 +28,10 @@ pub fn restart_selected_containers(app_state: &mut AppState, config: &Config) ->
 
     // Only show progress modal if experimental animation flag is set
     let tx = if config.general.experimental_fx {
-        Some(app_state.start_progress(format!("Restarting {} containers...", container_names.len())))
+        Some(app_state.start_progress(format!(
+            "Restarting {} containers...",
+            container_names.len()
+        )))
     } else {
         None
     };
@@ -37,7 +43,10 @@ pub fn restart_selected_containers(app_state: &mut AppState, config: &Config) ->
     Ok(())
 }
 
-fn restart_containers_async(container_names: Vec<String>, tx: Option<Sender<ProgressUpdate>>) -> Result<(), String> {
+fn restart_containers_async(
+    container_names: Vec<String>,
+    tx: Option<Sender<ProgressUpdate>>,
+) -> Result<(), String> {
     let total = container_names.len();
     let mut restarted = 0;
     let mut errors = Vec::new();
@@ -53,11 +62,7 @@ fn restart_containers_async(container_names: Vec<String>, tx: Option<Sender<Prog
 
         thread::sleep(Duration::from_millis(50));
 
-        match Command::new("docker")
-            .arg("restart")
-            .arg(&name)
-            .output()
-        {
+        match Command::new("docker").arg("restart").arg(&name).output() {
             Ok(output) => {
                 if output.status.success() {
                     restarted += 1;
@@ -67,7 +72,10 @@ fn restart_containers_async(container_names: Vec<String>, tx: Option<Sender<Prog
                 }
             }
             Err(e) => {
-                errors.push(format!("Failed to execute docker restart for {}: {}", name, e));
+                errors.push(format!(
+                    "Failed to execute docker restart for {}: {}",
+                    name, e
+                ));
             }
         }
     }
@@ -83,9 +91,15 @@ fn restart_containers_async(container_names: Vec<String>, tx: Option<Sender<Prog
         Ok(())
     } else {
         if let Some(ref sender) = tx {
-            let _ = sender.send(ProgressUpdate::Error(format!("Some containers failed to restart: {}", errors.join(", "))));
+            let _ = sender.send(ProgressUpdate::Error(format!(
+                "Some containers failed to restart: {}",
+                errors.join(", ")
+            )));
         }
-        Err(format!("Some containers failed to restart: {}", errors.join(", ")))
+        Err(format!(
+            "Some containers failed to restart: {}",
+            errors.join(", ")
+        ))
     }
 }
 

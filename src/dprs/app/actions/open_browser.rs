@@ -1,4 +1,4 @@
-// 
+//
 //  Implements launch-browser functionality to open Docker container web interfaces.
 //  This module contains a function to open the selected container's IP address
 //  in the default system browser using platform-specific commands, allowing

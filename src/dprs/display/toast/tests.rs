@@ -33,7 +33,7 @@ fn test_toast_not_expired() {
 fn test_toast_manager_show() {
     let mut manager = ToastManager::new();
     assert!(manager.get_toast().is_none());
-    
+
     manager.show("New toast", 100);
     let toast = manager.get_toast().unwrap();
     assert_eq!(toast.message, "New toast");
@@ -44,7 +44,7 @@ fn test_toast_manager_clear() {
     let mut manager = ToastManager::new();
     manager.show("Test toast", 100);
     assert!(manager.get_toast().is_some());
-    
+
     manager.clear();
     assert!(manager.get_toast().is_none());
 }
@@ -54,7 +54,7 @@ fn test_toast_manager_check_expired() {
     let mut manager = ToastManager::new();
     manager.show("Expiring toast", 10);
     assert!(manager.get_toast().is_some());
-    
+
     sleep(Duration::from_millis(20));
     manager.check_expired();
     assert!(manager.get_toast().is_none());
@@ -64,7 +64,7 @@ fn test_toast_manager_check_expired() {
 fn test_toast_manager_not_expired() {
     let mut manager = ToastManager::new();
     manager.show("Non-expiring toast", 100);
-    
+
     manager.check_expired();
     assert!(manager.get_toast().is_some());
 }

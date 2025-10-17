@@ -7,7 +7,8 @@ pub mod process_list_tabular;
 pub mod toast;
 
 // The main display module
-mod display;
 pub use display::*;
+
+mod display;
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

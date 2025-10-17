@@ -9,7 +9,7 @@
 use bollard::query_parameters::{ListContainersOptionsBuilder, LogsOptionsBuilder};
 use bollard::Docker;
 use std::collections::VecDeque;
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -61,45 +61,53 @@ impl DockerLogWatcher {
                     }
                 };
 
-                let options = Some(LogsOptionsBuilder::new().follow(true).stdout(true).stderr(true).tail("100").build());
+                let options = Some(
+                    LogsOptionsBuilder::new()
+                        .follow(true)
+                        .stdout(true)
+                        .stderr(true)
+                        .tail("100")
+                        .build(),
+                );
 
                 let mut stream = docker.logs(&container_name, options);
 
                 use futures_util::stream::StreamExt;
                 use tokio::time::timeout;
-                
+
                 while *running.lock().unwrap() {
                     // Use timeout to avoid hanging indefinitely on stream.next()
                     let timeout_duration = Duration::from_millis(100);
                     match timeout(timeout_duration, stream.next()).await {
-                        Ok(Some(log_result)) => {
-                            match log_result {
-                                Ok(log_line) => {
-                                    let log_str = match log_line {
-                                        bollard::container::LogOutput::StdOut { message } => {
-                                            String::from_utf8_lossy(&message).trim_end().to_string()
-                                        }
-                                        bollard::container::LogOutput::StdErr { message } => {
-                                            format!("ERROR: {}", String::from_utf8_lossy(&message).trim_end())
-                                        }
-                                        bollard::container::LogOutput::Console { message } => {
-                                            String::from_utf8_lossy(&message).trim_end().to_string()
-                                        }
-                                        bollard::container::LogOutput::StdIn { message: _ } => continue,
-                                    };
-
-                                    let mut logs = logs.lock().unwrap();
-                                    logs.push_back(log_str);
-                                    while logs.len() > max_logs {
-                                        logs.pop_front();
+                        Ok(Some(log_result)) => match log_result {
+                            Ok(log_line) => {
+                                let log_str = match log_line {
+                                    bollard::container::LogOutput::StdOut { message } => {
+                                        String::from_utf8_lossy(&message).trim_end().to_string()
                                     }
-                                }
-                                Err(e) => {
-                                    eprintln!("Error reading logs for {}: {}", container_name, e);
-                                    break;
+                                    bollard::container::LogOutput::StdErr { message } => {
+                                        format!(
+                                            "ERROR: {}",
+                                            String::from_utf8_lossy(&message).trim_end()
+                                        )
+                                    }
+                                    bollard::container::LogOutput::Console { message } => {
+                                        String::from_utf8_lossy(&message).trim_end().to_string()
+                                    }
+                                    bollard::container::LogOutput::StdIn { message: _ } => continue,
+                                };
+
+                                let mut logs = logs.lock().unwrap();
+                                logs.push_back(log_str);
+                                while logs.len() > max_logs {
+                                    logs.pop_front();
                                 }
                             }
-                        }
+                            Err(e) => {
+                                eprintln!("Error reading logs for {}: {}", container_name, e);
+                                break;
+                            }
+                        },
                         Ok(None) => {
                             // Stream ended, exit gracefully
                             break;
@@ -127,7 +135,7 @@ impl DockerLogWatcher {
                 // Give the thread up to 1 second to finish gracefully
                 let timeout = Duration::from_secs(1);
                 let start = std::time::Instant::now();
-                
+
                 let mut join_result = None;
                 while start.elapsed() < timeout {
                     // Check if thread is still running
@@ -137,7 +145,7 @@ impl DockerLogWatcher {
                     }
                     std::thread::sleep(Duration::from_millis(10));
                 }
-                
+
                 // If thread hasn't finished, we'll just let it go
                 if join_result.is_none() {
                     eprintln!("Warning: Log watcher thread did not stop gracefully within timeout");
@@ -183,18 +191,18 @@ impl DockerLogManager {
     pub fn start_watching_all_containers(&mut self) -> Result<(), Error> {
         // Create a tokio runtime for this synchronous function
         let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| Error::new(ErrorKind::Other, format!("Failed to create runtime: {}", e)))?;
+            .map_err(|e| Error::other(format!("Failed to create runtime: {}", e)))?;
 
         let container_names = rt.block_on(async {
             let docker = Docker::connect_with_defaults()
-                .map_err(|e| Error::new(ErrorKind::Other, format!("Failed to connect to Docker: {}", e)))?;
+                .map_err(|e| Error::other(format!("Failed to connect to Docker: {}", e)))?;
 
             let options = Some(ListContainersOptionsBuilder::new().all(false).build());
 
             let containers = docker
                 .list_containers(options)
                 .await
-                .map_err(|e| Error::new(ErrorKind::Other, format!("Failed to list containers: {}", e)))?;
+                .map_err(|e| Error::other(format!("Failed to list containers: {}", e)))?;
 
             let names: Vec<String> = containers
                 .into_iter()
@@ -253,8 +261,6 @@ impl Drop for DockerLogManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    
 
     #[test]
     fn test_docker_log_watcher_new() {
@@ -274,7 +280,6 @@ mod tests {
         let manager = DockerLogManager::default();
         assert_eq!(manager.watcher_count(), 0);
     }
-
 }
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

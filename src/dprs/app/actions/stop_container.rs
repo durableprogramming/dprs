@@ -1,4 +1,4 @@
-// 
+//
 //  Implements container management functionality for stopping Docker containers.
 //  This module contains a function to stop the selected container by executing
 //  a 'docker stop' command, allowing users to halt container execution directly

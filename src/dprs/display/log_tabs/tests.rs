@@ -16,7 +16,11 @@ fn test_log_tabs_render() {
     let backend = TestBackend::new(100, 3);
     let mut terminal = Terminal::new(backend).unwrap();
 
-    let titles = vec!["container1".to_string(), "container2".to_string(), "container3".to_string()];
+    let titles = vec![
+        "container1".to_string(),
+        "container2".to_string(),
+        "container3".to_string(),
+    ];
     let log_tabs = LogTabs::new(titles);
     let config = Config::default();
 
@@ -34,7 +38,11 @@ fn test_log_tabs_with_selection() {
     let backend = TestBackend::new(100, 3);
     let mut terminal = Terminal::new(backend).unwrap();
 
-    let titles = vec!["container1".to_string(), "container2".to_string(), "container3".to_string()];
+    let titles = vec![
+        "container1".to_string(),
+        "container2".to_string(),
+        "container3".to_string(),
+    ];
     let mut log_tabs = LogTabs::new(titles);
     log_tabs.set_index(1); // Select second tab
     let config = Config::default();
@@ -70,7 +78,11 @@ fn test_log_tabs_styles() {
     let backend = TestBackend::new(100, 3);
     let mut terminal = Terminal::new(backend).unwrap();
 
-    let titles = vec!["container1".to_string(), "container2".to_string(), "container3".to_string()];
+    let titles = vec![
+        "container1".to_string(),
+        "container2".to_string(),
+        "container3".to_string(),
+    ];
     let log_tabs = LogTabs::new(titles);
     let config = Config::default();
 
@@ -79,7 +91,7 @@ fn test_log_tabs_styles() {
             render_log_tabs::<TestBackend>(f, &log_tabs, f.area(), &config);
         })
         .unwrap();
-    
+
     // Verify output contains expected content
     let output = terminal.backend().to_string();
     assert!(output.contains("container1"));

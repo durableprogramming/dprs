@@ -9,14 +9,11 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::{io, io::stdout};
 
-use dprs::shared::docker::docker_log_watcher::DockerLogManager;
 use dprs::dplw::main_loop::run_app;
+use dprs::shared::docker::docker_log_watcher::DockerLogManager;
 
 fn main() -> Result<(), io::Error> {
     // Setup terminal
@@ -27,7 +24,7 @@ fn main() -> Result<(), io::Error> {
 
     let mut log_manager = DockerLogManager::new();
     log_manager.start_watching_all_containers()?;
-    
+
     // Ensure cleanup happens even if there's a panic
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         run_app(&mut terminal, &mut log_manager)

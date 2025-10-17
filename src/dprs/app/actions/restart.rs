@@ -6,11 +6,11 @@
 //  the container list to reflect the current state.
 
 pub use crate::dprs::app::state_machine::{AppState, ProgressUpdate};
+use crate::shared::config::Config;
 use std::process::Command;
 use std::sync::mpsc::Sender;
 use std::thread;
 use std::time::Duration;
-use crate::shared::config::Config;
 
 pub fn restart_container(app_state: &mut AppState, config: &Config) -> Result<(), String> {
     let selected = app_state
@@ -39,7 +39,10 @@ pub fn restart_container(app_state: &mut AppState, config: &Config) -> Result<()
     Ok(())
 }
 
-fn restart_container_async(container_name: String, tx: Option<Sender<ProgressUpdate>>) -> Result<(), String> {
+fn restart_container_async(
+    container_name: String,
+    tx: Option<Sender<ProgressUpdate>>,
+) -> Result<(), String> {
     // Send initial progress if tx is present
     if let Some(ref sender) = tx {
         let _ = sender.send(ProgressUpdate::Update {
@@ -71,14 +74,20 @@ fn restart_container_async(container_name: String, tx: Option<Sender<ProgressUpd
             } else {
                 let error = String::from_utf8_lossy(&output.stderr);
                 if let Some(ref sender) = tx {
-                    let _ = sender.send(ProgressUpdate::Error(format!("Failed to restart {}: {}", container_name, error)));
+                    let _ = sender.send(ProgressUpdate::Error(format!(
+                        "Failed to restart {}: {}",
+                        container_name, error
+                    )));
                 }
                 Err(format!("Failed to restart container: {}", error))
             }
         }
         Err(e) => {
             if let Some(ref sender) = tx {
-                let _ = sender.send(ProgressUpdate::Error(format!("Failed to execute docker restart: {}", e)));
+                let _ = sender.send(ProgressUpdate::Error(format!(
+                    "Failed to execute docker restart: {}",
+                    e
+                )));
             }
             Err(format!("Failed to restart container: {}", e))
         }

@@ -10,20 +10,26 @@ use ratatui::{
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, List, ListItem, Padding},
-    Frame
+    Frame,
 };
 
 use crate::dprs::app::state_machine::AppState;
 use crate::shared::config::Config;
 
-pub fn render_container_list<B: Backend>(f: &mut Frame, app_state: &mut AppState, area: Rect, config: &Config) {
+pub fn render_container_list<B: Backend>(
+    f: &mut Frame,
+    app_state: &mut AppState,
+    area: Rect,
+    config: &Config,
+) {
     let displayed_containers = app_state.get_displayed_containers();
     let items: Vec<ListItem> = displayed_containers
         .iter()
         .enumerate()
         .map(|(index, c)| {
             // Check if this container is visually selected
-            let is_visual_selected = app_state.visual_selection
+            let is_visual_selected = app_state
+                .visual_selection
                 .as_ref()
                 .map(|selection| selection.is_selected(index))
                 .unwrap_or(false);
@@ -33,7 +39,8 @@ pub fn render_container_list<B: Backend>(f: &mut Frame, app_state: &mut AppState
 
             let mut base_style = Style::default().bg(config.get_color("background_main"));
             if is_visual_selected {
-                base_style = base_style.bg(config.get_color("background_selection_orange")); // Orange background for selection
+                base_style = base_style.bg(config.get_color("background_selection_orange"));
+                // Orange background for selection
             }
             if is_search_match {
                 base_style = base_style.add_modifier(Modifier::UNDERLINED);
@@ -52,12 +59,18 @@ pub fn render_container_list<B: Backend>(f: &mut Frame, app_state: &mut AppState
 
             let status = Line::from(vec![
                 Span::styled("Status: ", base_style),
-                Span::styled(&c.status, base_style.fg(config.get_color("container_status"))),
+                Span::styled(
+                    &c.status,
+                    base_style.fg(config.get_color("container_status")),
+                ),
             ]);
 
             let ip = Line::from(vec![
                 Span::styled("IP:     ", base_style),
-                Span::styled(&c.ip_address, base_style.fg(config.get_color("container_ip"))),
+                Span::styled(
+                    &c.ip_address,
+                    base_style.fg(config.get_color("container_ip")),
+                ),
             ]);
 
             let ports = Line::from(vec![

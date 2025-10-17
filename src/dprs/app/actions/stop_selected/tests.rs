@@ -58,15 +58,13 @@ fn test_stop_selected_containers_success() {
 #[test]
 fn test_stop_selected_containers_no_selection() {
     let mut app_state = AppState::new();
-    app_state.containers = vec![
-        Container {
-            name: "test-container".to_string(),
-            image: "test-image".to_string(),
-            status: "running".to_string(),
-            ip_address: "192.168.1.100".to_string(),
-            ports: "80:80".to_string(),
-        }
-    ];
+    app_state.containers = vec![Container {
+        name: "test-container".to_string(),
+        image: "test-image".to_string(),
+        status: "running".to_string(),
+        ip_address: "192.168.1.100".to_string(),
+        ports: "80:80".to_string(),
+    }];
 
     // Enter visual mode but don't select anything
     app_state.enter_visual_mode();

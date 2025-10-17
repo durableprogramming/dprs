@@ -6,6 +6,7 @@
 // types and make the interface more intuitive for users. This component
 // helps users understand the available interactions at a glance.
 
+use crate::shared::config::Config;
 use ratatui::{
     backend::Backend,
     layout::Rect,
@@ -14,7 +15,6 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
-use crate::shared::config::Config;
 
 fn get_key_for_action(config: &Config, action: &str, mode: &str) -> Option<String> {
     let bindings = match mode {
@@ -38,7 +38,10 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
     if let Some(key) = get_key_for_action(config, "Quit", "normal") {
         help_text.push(Span::styled(
             key,
-            Style::default().bg(config.get_color("background_dark")).fg(config.get_color("hotkey_red")).add_modifier(Modifier::BOLD),
+            Style::default()
+                .bg(config.get_color("background_dark"))
+                .fg(config.get_color("hotkey_red"))
+                .add_modifier(Modifier::BOLD),
         ));
         help_text.push(Span::raw(": Quit | "));
     }
@@ -138,11 +141,14 @@ pub fn render_hotkey_bar<B: Backend>(f: &mut Frame, area: Rect, config: &Config)
         help_text.push(Span::raw(": Clear Filter"));
     }
 
-
-
     let help = Paragraph::new(Line::from(help_text))
         .style(Style::default().bg(config.get_color("background_dark")))
-        .block(Block::default().borders(Borders::ALL).title("Hotkeys").style(Style::default().bg(config.get_color("background_dark"))));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Hotkeys")
+                .style(Style::default().bg(config.get_color("background_dark"))),
+        );
 
     f.render_widget(help, area);
 }

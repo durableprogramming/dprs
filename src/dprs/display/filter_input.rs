@@ -9,7 +9,12 @@ use ratatui::{
 use crate::dprs::app::state_machine::AppState;
 use crate::shared::config::Config;
 
-pub fn render_filter_input<B: Backend>(f: &mut Frame, app_state: &AppState, area: Rect, config: &Config) {
+pub fn render_filter_input<B: Backend>(
+    f: &mut Frame,
+    app_state: &AppState,
+    area: Rect,
+    config: &Config,
+) {
     if !app_state.filter_mode {
         return;
     }
@@ -19,7 +24,7 @@ pub fn render_filter_input<B: Backend>(f: &mut Frame, app_state: &AppState, area
     let popup_height = 3;
     let x = area.width.saturating_sub(popup_width) / 2;
     let y = area.height.saturating_sub(popup_height) / 2;
-    
+
     let popup_area = Rect {
         x: area.x + x,
         y: area.y + y,
@@ -29,15 +34,23 @@ pub fn render_filter_input<B: Backend>(f: &mut Frame, app_state: &AppState, area
 
     // Clear the area and render the input box
     f.render_widget(Clear, popup_area);
-    
+
     let input_widget = Paragraph::new(app_state.filter_text.as_str())
-        .style(Style::default().fg(config.get_color("filter_text")).bg(config.get_color("background_dark")))
+        .style(
+            Style::default()
+                .fg(config.get_color("filter_text"))
+                .bg(config.get_color("background_dark")),
+        )
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .title("Filter")
                 .title_alignment(Alignment::Center)
-                .style(Style::default().fg(config.get_color("filter_cursor")).bg(config.get_color("background_dark"))),
+                .style(
+                    Style::default()
+                        .fg(config.get_color("filter_cursor"))
+                        .bg(config.get_color("background_dark")),
+                ),
         );
 
     f.render_widget(input_widget, popup_area);

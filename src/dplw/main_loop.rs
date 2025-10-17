@@ -12,11 +12,11 @@ use ratatui::{
 };
 use std::{io, time::Duration};
 
+use crate::shared::config::Config;
 use crate::shared::display::log_tabs::{render_log_tabs, LogTabs};
+use crate::shared::display::log_view::{render_log_view, LogLevel, LogView};
 use crate::shared::docker::docker_log_watcher::DockerLogManager;
 use crate::shared::input::input_watcher::InputWatcher;
-use crate::shared::display::log_view::{render_log_view, LogLevel, LogView};
-use crate::shared::config::Config;
 
 pub fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
@@ -28,7 +28,7 @@ pub fn run_app<B: Backend>(
 
     // Create log views for each container (one per container)
     let mut log_views: Vec<LogView> = Vec::new();
-    
+
     // Create tabs for container selection
     let container_names: Vec<String> = (0..log_manager.watcher_count())
         .filter_map(|i| {
@@ -100,7 +100,9 @@ pub fn run_app<B: Backend>(
             let help_text = vec![
                 Span::styled(
                     "q/Ctrl+C",
-                    Style::default().fg(config.get_color("message_error")).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(config.get_color("message_error"))
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(": Quit | "),
                 Span::styled(
@@ -163,28 +165,28 @@ pub fn run_app<B: Backend>(
                             log_views[active_tab].scroll_up();
                         }
                     }
-                },
+                }
                 KeyCode::Down => {
                     if let Some(active_tab) = log_tabs.index.checked_sub(0) {
                         if active_tab < log_views.len() {
                             log_views[active_tab].scroll_down();
                         }
                     }
-                },
+                }
                 KeyCode::Home => {
                     if let Some(active_tab) = log_tabs.index.checked_sub(0) {
                         if active_tab < log_views.len() {
                             log_views[active_tab].scroll_to_top();
                         }
                     }
-                },
+                }
                 KeyCode::End => {
                     if let Some(active_tab) = log_tabs.index.checked_sub(0) {
                         if active_tab < log_views.len() {
                             log_views[active_tab].scroll_to_bottom();
                         }
                     }
-                },
+                }
                 KeyCode::Char('r') => {
                     log_manager.refresh()?;
                     // Update tabs with new container names
@@ -227,7 +229,7 @@ pub fn run_app<B: Backend>(
                 _ => {}
             }
         }
-        
+
         // Small sleep to prevent busy waiting
         std::thread::sleep(Duration::from_millis(10));
     }
@@ -236,9 +238,9 @@ pub fn run_app<B: Backend>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shared::docker::docker_log_watcher::DockerLogManager;
     use std::sync::{Arc, Mutex};
     use std::thread;
-    use crate::shared::docker::docker_log_watcher::DockerLogManager;
 
     #[test]
     fn test_log_manager_creation() {

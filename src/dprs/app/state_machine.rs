@@ -6,12 +6,12 @@
 // lists, select containers, and refresh container data by querying the
 // Docker CLI. This serves as the central data model for the application.
 
+use crate::dprs::modes::{CommandState, Mode, SearchState, VisualSelection};
 use ratatui::widgets::{ListState, TableState};
 use std::collections::HashSet;
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use std::process::Command;
 use std::sync::mpsc::{self, Receiver, Sender};
-use crate::dprs::modes::{Mode, VisualSelection, CommandState, SearchState};
 
 #[derive(Clone)]
 pub struct Container {
@@ -41,13 +41,13 @@ pub enum AppEvent {
     EnterFilterMode,
     ExitFilterMode,
     ClearFilter,
-    
+
     // Modal Events
     EnterNormalMode,
     EnterVisualMode,
     EnterCommandMode,
     EnterSearchMode,
-    
+
     // Vim-style Navigation
     GoToFirst,
     GoToLast,
@@ -57,7 +57,7 @@ pub enum AppEvent {
     HalfPageDown,
     NextSearchResult,
     PreviousSearchResult,
-    
+
     // Visual Mode
     ExtendSelection,
     StopSelectedContainers,
@@ -65,7 +65,7 @@ pub enum AppEvent {
 
     // Additional actions
     ToggleTabular,
-    
+
     // Command Mode
     ExecuteCommand,
     CancelCommand,
@@ -191,7 +191,8 @@ impl AppState {
                 if self.filter_text.is_empty() {
                     self.containers.get(i)
                 } else {
-                    self.filtered_containers.get(i)
+                    self.filtered_containers
+                        .get(i)
                         .and_then(|&real_index| self.containers.get(real_index))
                 }
             }
@@ -201,7 +202,8 @@ impl AppState {
 
     pub fn refresh_containers(&mut self) -> Result<(), Error> {
         // Store previous container names for detecting new ones
-        let previous_names: std::collections::HashSet<String> = self.containers.iter().map(|c| c.name.clone()).collect();
+        let previous_names: std::collections::HashSet<String> =
+            self.containers.iter().map(|c| c.name.clone()).collect();
 
         self.containers.clear();
         self.new_container_indices.clear();
@@ -213,21 +215,13 @@ impl AppState {
                 "{{.Names}}|{{.Image}}|{{.Status}}|{{.Ports}}",
             ])
             .output()
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("Failed to execute docker command: {}", e),
-                )
-            })?;
+            .map_err(|e| Error::other(format!("Failed to execute docker command: {}", e)))?;
 
         if !output.status.success() {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!(
-                    "Docker command failed: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                ),
-            ));
+            return Err(Error::other(format!(
+                "Docker command failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            )));
         }
 
         let output_str = String::from_utf8_lossy(&output.stdout);
@@ -247,12 +241,7 @@ impl AppState {
                     .arg("{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}")
                     .arg(name.as_str())
                     .output()
-                    .map_err(|e| {
-                        Error::new(
-                            ErrorKind::Other,
-                            format!("Failed to get container IP: {}", e),
-                        )
-                    })?;
+                    .map_err(|e| Error::other(format!("Failed to get container IP: {}", e)))?;
 
                 let ip_address = String::from_utf8_lossy(&ip_output.stdout)
                     .trim()
@@ -322,7 +311,8 @@ impl AppState {
         }
 
         let filter_lower = self.filter_text.to_lowercase();
-        self.filtered_containers = self.containers
+        self.filtered_containers = self
+            .containers
             .iter()
             .enumerate()
             .filter(|(_, container)| {
@@ -475,8 +465,8 @@ impl AppState {
             let current_name = &containers[current].name;
             let current_prefix = current_name.split('-').next().unwrap_or(current_name);
 
-            for i in (current + 1)..containers.len() {
-                let name = &containers[i].name;
+            for (i, container) in containers.iter().enumerate().skip(current + 1) {
+                let name = &container.name;
                 let prefix = name.split('-').next().unwrap_or(name);
                 if prefix != current_prefix {
                     self.list_state.select(Some(i));
@@ -548,30 +538,34 @@ impl AppState {
         use regex::Regex;
 
         self.search_state.matches.clear();
-        
+
         if query.is_empty() {
             return;
         }
 
         let containers = self.get_displayed_containers();
-        
+
         // Try regex first, fall back to simple string search
         let matches = if let Ok(re) = Regex::new(query) {
-            containers.iter().enumerate()
+            containers
+                .iter()
+                .enumerate()
                 .filter(|(_, container)| {
-                    re.is_match(&container.name) ||
-                    re.is_match(&container.image) ||
-                    re.is_match(&container.status)
+                    re.is_match(&container.name)
+                        || re.is_match(&container.image)
+                        || re.is_match(&container.status)
                 })
                 .map(|(i, _)| i)
                 .collect()
         } else {
             let query_lower = query.to_lowercase();
-            containers.iter().enumerate()
+            containers
+                .iter()
+                .enumerate()
                 .filter(|(_, container)| {
-                    container.name.to_lowercase().contains(&query_lower) ||
-                    container.image.to_lowercase().contains(&query_lower) ||
-                    container.status.to_lowercase().contains(&query_lower)
+                    container.name.to_lowercase().contains(&query_lower)
+                        || container.image.to_lowercase().contains(&query_lower)
+                        || container.status.to_lowercase().contains(&query_lower)
                 })
                 .map(|(i, _)| i)
                 .collect()
@@ -621,7 +615,10 @@ impl AppState {
 
         for update in updates {
             match update {
-                ProgressUpdate::Update { message, percentage } => {
+                ProgressUpdate::Update {
+                    message,
+                    percentage,
+                } => {
                     self.progress_modal.message = message;
                     self.progress_modal.percentage = percentage;
                 }

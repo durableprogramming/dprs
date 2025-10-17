@@ -16,11 +16,11 @@ use ratatui::{
     Frame,
 };
 
+use crate::shared::config::Config;
+use ansi_to_tui::IntoText;
 use std::collections::VecDeque;
 use std::time::Instant;
 use tailspin::Highlighter;
-use ansi_to_tui::IntoText;
-use crate::shared::config::Config;
 
 pub struct LogEntry {
     pub timestamp: Instant,
@@ -115,7 +115,7 @@ impl LogView {
     }
 
     pub fn get_scroll_position(&mut self) -> usize {
-        return self.scroll_position;
+        self.scroll_position
     }
 
     pub fn get_log_count(&self) -> usize {
@@ -130,10 +130,10 @@ impl LogView {
 fn parse_log_with_tailspin<'a>(message: &'a str, config: &'a Config) -> Vec<Span<'a>> {
     // Create a tailspin highlighter with default settings
     let highlighter = Highlighter::default();
-    
+
     // Apply tailspin highlighting to get ANSI-colored string
     let highlighted_message = highlighter.apply(message);
-    
+
     // Convert ANSI-colored string to ratatui Text and extract spans
     match highlighted_message.as_ref().into_text() {
         Ok(text) => {
@@ -142,12 +142,22 @@ fn parse_log_with_tailspin<'a>(message: &'a str, config: &'a Config) -> Vec<Span
                 line.spans.clone()
             } else {
                 // Fallback to plain text if conversion fails
-                vec![Span::styled(message, Style::default().bg(config.get_color("background_main")).fg(config.get_color("text_main")))]
+                vec![Span::styled(
+                    message,
+                    Style::default()
+                        .bg(config.get_color("background_main"))
+                        .fg(config.get_color("text_main")),
+                )]
             }
         }
         Err(_) => {
             // Fallback to plain text if conversion fails
-            vec![Span::styled(message, Style::default().bg(config.get_color("background_main")).fg(config.get_color("text_main")))]
+            vec![Span::styled(
+                message,
+                Style::default()
+                    .bg(config.get_color("background_main"))
+                    .fg(config.get_color("text_main")),
+            )]
         }
     }
 }

@@ -18,7 +18,7 @@ impl Mode {
     pub fn display_name(&self) -> &'static str {
         match self {
             Mode::Normal => "NORMAL",
-            Mode::Visual => "VISUAL", 
+            Mode::Visual => "VISUAL",
             Mode::Command => "COMMAND",
             Mode::Search => "SEARCH",
         }
@@ -36,7 +36,7 @@ impl VisualSelection {
     pub fn new(start_index: usize) -> Self {
         let mut selected_indices = HashSet::new();
         selected_indices.insert(start_index);
-        
+
         Self {
             start_index,
             current_index: start_index,
@@ -47,10 +47,10 @@ impl VisualSelection {
     pub fn extend_to(&mut self, index: usize) {
         self.current_index = index;
         self.selected_indices.clear();
-        
+
         let start = self.start_index.min(index);
         let end = self.start_index.max(index);
-        
+
         for i in start..=end {
             self.selected_indices.insert(i);
         }
@@ -67,6 +67,12 @@ pub struct CommandState {
     pub cursor_pos: usize,
     pub history: Vec<String>,
     pub history_index: Option<usize>,
+}
+
+impl Default for CommandState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CommandState {
@@ -197,6 +203,12 @@ pub struct SearchState {
     pub last_query: String,
 }
 
+impl Default for SearchState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SearchState {
     pub fn new() -> Self {
         Self {
@@ -234,8 +246,10 @@ impl SearchState {
             Some(index) => {
                 let next_index = if self.is_forward {
                     (index + 1) % self.matches.len()
+                } else if index == 0 {
+                    self.matches.len() - 1
                 } else {
-                    if index == 0 { self.matches.len() - 1 } else { index - 1 }
+                    index - 1
                 };
                 self.current_match = Some(next_index);
                 Some(self.matches[next_index])
