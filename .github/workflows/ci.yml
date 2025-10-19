@@ -15,17 +15,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
-     - name: Install Rust
-       uses: dtolnay/rust-toolchain@stable
 
-     - name: Check formatting
-       run: cargo fmt --check
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
 
-     - name: Run clippy
-       run: cargo clippy -- -D warnings
+    - name: Check formatting
+      run: cargo fmt --check
 
-     - name: Cache cargo registry
+    - name: Run clippy
+      run: cargo clippy -- -D warnings
+
+    - name: Cache cargo registry
       uses: actions/cache@v4
       with:
         path: ~/.cargo/registry

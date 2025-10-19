@@ -5,7 +5,7 @@
   env.GREET = "devenv";
 
   # https://devenv.sh/packages/
-  packages = [ pkgs.git pkgs.xorg.libxcb pkgs.bashInteractive pkgs.cmake pkgs.xorg.libX11.dev];
+  packages = [ pkgs.git pkgs.xorg.libxcb pkgs.bashInteractive pkgs.cmake pkgs.xorg.libX11.dev pkgs.cargo-deb pkgs.cargo-generate-rpm];
 
   # https://devenv.sh/languages/
   languages.rust.enable = true;
