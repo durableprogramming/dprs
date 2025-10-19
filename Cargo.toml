@@ -1,6 +1,6 @@
 [package]
 name = "dprs"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["Durable Programming, LLC"]
 license = "MIT"
@@ -60,7 +60,6 @@ Features:
 - Clipboard Support: Copy container IP addresses
 
 DPRS is designed to assist in software development workflows."""
-depends = "docker.io | docker-ce"
 section = "utils"
 priority = "optional"
 assets = [
