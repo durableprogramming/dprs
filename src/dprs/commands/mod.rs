@@ -1,7 +1,7 @@
 // DPRS command handling module
 
-pub use commands::*;
+pub use handler::*;
 
-mod commands;
+mod handler;
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

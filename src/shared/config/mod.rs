@@ -1,7 +1,7 @@
 // Configuration management shared by both applications
 
-pub use config::*;
+pub use settings::*;
 
-mod config;
+mod settings;
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.
