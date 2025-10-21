@@ -6,9 +6,14 @@ DPRS is designed to assist in software development, not sysadmin or DevOps, and 
 
 ![DPRS demo video](demo/demo.gif)
 
+## Quick Install
+
+```bash
+curl -fsSL https://get.durableprogramming.com | sh
+```
 
 ```
-       .o8                               
+       .o8
       "888                                   _____              __
   .oooo888  oo.ooooo.  oooo d8b  .oooo.o    |     \.-----.----.|  |--.-----.----.
  d88' `888   888' `88b `888""8P d88(  `8 () |  --  |  _  |  __||    <|  -__|   _|
@@ -37,12 +42,6 @@ DPRS is designed to assist in software development, not sysadmin or DevOps, and 
   - Easy navigation between container logs
   - Scroll through log history
   - Automatic log rotation to manage memory usage
-
-## Installation
-
-```bash
-cargo install dprs
-```
 
 ## Usage
 
