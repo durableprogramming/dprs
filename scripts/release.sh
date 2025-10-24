@@ -5,25 +5,43 @@ set -e
 
 VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
 
-# Build static binaries with musl
+# Try to build static binaries with musl, fallback to regular build if it fails
 echo "Building static binaries with musl..."
-cargo build --release --target x86_64-unknown-linux-musl
+if ! cargo build --release --target x86_64-unknown-linux-musl 2>/dev/null; then
+    echo "musl build failed, falling back to regular build..."
+    cargo build --release
+    TARGET_DIR="target/release"
+    DEB_TARGET=""
+    RPM_TARGET=""
+else
+    TARGET_DIR="target/x86_64-unknown-linux-musl/release"
+    DEB_TARGET="--target x86_64-unknown-linux-musl"
+    RPM_TARGET="--target x86_64-unknown-linux-musl"
+fi
 
 # Build Debian package
 echo "Building Debian package..."
 cargo install cargo-deb 2>/dev/null || true
-cargo deb --target x86_64-unknown-linux-musl --no-build
+if [ -n "$DEB_TARGET" ]; then
+    cargo deb $DEB_TARGET --no-build
+else
+    cargo deb --no-build
+fi
 
 # Build RPM package
 echo "Building RPM package..."
 cargo install cargo-generate-rpm 2>/dev/null || true
-cargo generate-rpm --target x86_64-unknown-linux-musl
+if [ -n "$RPM_TARGET" ]; then
+    cargo generate-rpm $RPM_TARGET
+else
+    cargo generate-rpm
+fi
 
 # Create tar.gz
 echo "Creating tar.gz package..."
 mkdir -p release
-cp target/x86_64-unknown-linux-musl/release/dprs release/
-cp target/x86_64-unknown-linux-musl/release/dplw release/
+cp $TARGET_DIR/dprs release/
+cp $TARGET_DIR/dplw release/
 tar -czf dprs-$VERSION.tar.gz -C release .
 
 echo "Release packages created:"
@@ -32,14 +50,28 @@ echo "- dprs-$VERSION.tar.gz"
 # Collect all release artifacts
 RELEASE_FILES=("dprs-$VERSION.tar.gz")
 
-if ls target/x86_64-unknown-linux-musl/debian/*.deb 1> /dev/null 2>&1; then
-  RELEASE_FILES+=(target/x86_64-unknown-linux-musl/debian/*.deb)
-  echo "- target/x86_64-unknown-linux-musl/debian/*.deb"
+# Check for Debian packages in appropriate directory
+if [ -n "$DEB_TARGET" ]; then
+    DEB_DIR="target/x86_64-unknown-linux-musl/debian"
+else
+    DEB_DIR="target/debian"
 fi
 
-if ls target/x86_64-unknown-linux-musl/generate-rpm/*.rpm 1> /dev/null 2>&1; then
-  RELEASE_FILES+=(target/x86_64-unknown-linux-musl/generate-rpm/*.rpm)
-  echo "- target/x86_64-unknown-linux-musl/generate-rpm/*.rpm"
+if ls $DEB_DIR/*.deb 1> /dev/null 2>&1; then
+  RELEASE_FILES+=($DEB_DIR/*.deb)
+  echo "- $DEB_DIR/*.deb"
+fi
+
+# Check for RPM packages in appropriate directory
+if [ -n "$RPM_TARGET" ]; then
+    RPM_DIR="target/x86_64-unknown-linux-musl/generate-rpm"
+else
+    RPM_DIR="target/generate-rpm"
+fi
+
+if ls $RPM_DIR/*.rpm 1> /dev/null 2>&1; then
+  RELEASE_FILES+=($RPM_DIR/*.rpm)
+  echo "- $RPM_DIR/*.rpm"
 fi
 
 echo "- Published to crates.io"
