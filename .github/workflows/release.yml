@@ -123,6 +123,11 @@ jobs:
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: x86_64-unknown-linux-musl
+
+    - name: Install musl tools
+      run: sudo apt-get update && sudo apt-get install -y musl-tools
 
     - name: Install cargo-deb
       run: cargo install cargo-deb
@@ -143,16 +148,19 @@ jobs:
       uses: actions/cache@v4
       with:
         path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-musl-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Build static binary with musl
+      run: cargo build --release --target x86_64-unknown-linux-musl
 
     - name: Build deb package
-      run: cargo deb
+      run: cargo deb --target x86_64-unknown-linux-musl --no-build
 
     - name: Upload deb artifact
       uses: actions/upload-artifact@v4
       with:
         name: deb-package
-        path: target/debian/*.deb
+        path: target/x86_64-unknown-linux-musl/debian/*.deb
 
   build-rpm:
     runs-on: ubuntu-latest
@@ -161,6 +169,11 @@ jobs:
 
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: x86_64-unknown-linux-musl
+
+    - name: Install musl tools
+      run: sudo apt-get update && sudo apt-get install -y musl-tools
 
     - name: Install cargo-generate-rpm
       run: cargo install cargo-generate-rpm
@@ -181,19 +194,19 @@ jobs:
       uses: actions/cache@v4
       with:
         path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-musl-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Build release
-      run: cargo build --release
+    - name: Build static binary with musl
+      run: cargo build --release --target x86_64-unknown-linux-musl
 
     - name: Build rpm package
-      run: cargo generate-rpm
+      run: cargo generate-rpm --target x86_64-unknown-linux-musl
 
     - name: Upload rpm artifact
       uses: actions/upload-artifact@v4
       with:
         name: rpm-package
-        path: target/generate-rpm/*.rpm
+        path: target/x86_64-unknown-linux-musl/generate-rpm/*.rpm
 
   # Publish to crates.io (Tier 1 language-specific package manager)
   publish-crates:

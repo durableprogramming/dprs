@@ -1,6 +1,6 @@
 [package]
 name = "dprs"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 authors = ["Durable Programming, LLC"]
 license = "MIT"
@@ -63,16 +63,16 @@ DPRS is designed to assist in software development workflows."""
 section = "utils"
 priority = "optional"
 assets = [
-    ["target/release/dprs", "usr/bin/", "755"],
-    ["target/release/dplw", "usr/bin/", "755"],
+    ["target/x86_64-unknown-linux-musl/release/dprs", "usr/bin/", "755"],
+    ["target/x86_64-unknown-linux-musl/release/dplw", "usr/bin/", "755"],
     ["README.md", "usr/share/doc/dprs/", "644"],
     ["LICENSE.md", "usr/share/doc/dprs/", "644"],
 ]
 
 [package.metadata.generate-rpm]
 assets = [
-    { source = "target/release/dprs", dest = "/usr/bin/dprs", mode = "755" },
-    { source = "target/release/dplw", dest = "/usr/bin/dplw", mode = "755" },
+    { source = "target/x86_64-unknown-linux-musl/release/dprs", dest = "/usr/bin/dprs", mode = "755" },
+    { source = "target/x86_64-unknown-linux-musl/release/dplw", dest = "/usr/bin/dplw", mode = "755" },
     { source = "README.md", dest = "/usr/share/doc/dprs/README.md", mode = "644" },
     { source = "LICENSE.md", dest = "/usr/share/doc/dprs/LICENSE.md", mode = "644" },
 ]
