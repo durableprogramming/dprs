@@ -179,6 +179,25 @@ pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &LogView, area: Rect
         format!("{}/{}", log_view.scroll_position + 1, logs.len())
     };
 
+    // Calculate the actual number of wrapped lines up to scroll_position
+    // We need to account for text wrapping in the available width
+    let available_width = area.width.saturating_sub(2) as usize; // Account for borders
+    let mut wrapped_lines_before_scroll = 0;
+
+    for (idx, entry) in logs.iter().enumerate() {
+        if idx >= log_view.scroll_position {
+            break;
+        }
+        // Calculate how many visual lines this log entry will take when wrapped
+        let message_width = entry.message.chars().count();
+        let lines_needed = if available_width > 0 {
+            (message_width + available_width - 1) / available_width
+        } else {
+            1
+        };
+        wrapped_lines_before_scroll += lines_needed.max(1);
+    }
+
     let log_widget = Paragraph::new(log_lines)
         .block(
             Block::default()
@@ -187,7 +206,7 @@ pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &LogView, area: Rect
         )
         .style(Style::default().bg(config.get_color("background_main")))
         .wrap(Wrap { trim: false })
-        .scroll((log_view.scroll_position as u16, 0));
+        .scroll((wrapped_lines_before_scroll as u16, 0));
 
     f.render_widget(log_widget, area);
 }
