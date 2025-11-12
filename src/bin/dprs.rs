@@ -189,23 +189,53 @@ fn handle_normal_mode(
         KeyCode::Char('n') => app_state.next_search_result(),
         KeyCode::Char('N') => app_state.previous_search_result(),
 
-        // Container actions
-        KeyCode::Char('s') => match actions::stop_container(app_state) {
-            Ok(_) => toast_manager.show("Stop command sent. Refreshing list...", 2000),
-            Err(e) => toast_manager.show(&format!("Error stopping container: {}", e), 3000),
-        },
-        KeyCode::Char('c') => match actions::copy_ip_address(app_state) {
-            Ok(_) => toast_manager.show("IP address copied to clipboard!", 2000),
-            Err(e) => toast_manager.show(&format!("Error copying IP: {}", e), 3000),
-        },
-        KeyCode::Char('o') => match actions::open_browser(app_state) {
-            Ok(_) => toast_manager.show("Opening browser...", 2000),
-            Err(e) => toast_manager.show(&format!("Error opening browser: {}", e), 3000),
-        },
-        KeyCode::Char('r') => match actions::restart_container(app_state, &*config) {
-            Ok(_) => toast_manager.show("Restart command sent. Refreshing list...", 2000),
-            Err(e) => toast_manager.show(&format!("Error restarting container: {}", e), 3000),
-        },
+        // Container/Project actions (behavior depends on compose_view_mode)
+        KeyCode::Char('s') => {
+            if app_state.compose_view_mode {
+                if let Some(selected) = app_state.list_state.selected() {
+                    match actions::stop_compose_project(app_state, selected, &*config) {
+                        Ok(_) => toast_manager.show("Stop command sent for project. Refreshing...", 2000),
+                        Err(e) => toast_manager.show(&format!("Error stopping project: {}", e), 3000),
+                    }
+                }
+            } else {
+                match actions::stop_container(app_state) {
+                    Ok(_) => toast_manager.show("Stop command sent. Refreshing list...", 2000),
+                    Err(e) => toast_manager.show(&format!("Error stopping container: {}", e), 3000),
+                }
+            }
+        }
+        KeyCode::Char('c') => {
+            if !app_state.compose_view_mode {
+                match actions::copy_ip_address(app_state) {
+                    Ok(ip) => toast_manager.show(&format!("IP address copied to clipboard: {}", ip), 2000),
+                    Err(e) => toast_manager.show(&format!("Error copying IP: {}", e), 3000),
+                }
+            }
+        }
+        KeyCode::Char('o') => {
+            if !app_state.compose_view_mode {
+                match actions::open_browser(app_state) {
+                    Ok(_) => toast_manager.show("Opening browser...", 2000),
+                    Err(e) => toast_manager.show(&format!("Error opening browser: {}", e), 3000),
+                }
+            }
+        }
+        KeyCode::Char('r') => {
+            if app_state.compose_view_mode {
+                if let Some(selected) = app_state.list_state.selected() {
+                    match actions::restart_compose_project(app_state, selected, &*config) {
+                        Ok(_) => toast_manager.show("Restart command sent for project. Refreshing...", 2000),
+                        Err(e) => toast_manager.show(&format!("Error restarting project: {}", e), 3000),
+                    }
+                }
+            } else {
+                match actions::restart_container(app_state, &*config) {
+                    Ok(_) => toast_manager.show("Restart command sent. Refreshing list...", 2000),
+                    Err(e) => toast_manager.show(&format!("Error restarting container: {}", e), 3000),
+                }
+            }
+        }
         KeyCode::Char('t') => {
             app_state.tabular_mode = !app_state.tabular_mode;
             let mode_text = if app_state.tabular_mode {
@@ -215,9 +245,34 @@ fn handle_normal_mode(
             };
             toast_manager.show(&format!("Switched to {} view", mode_text), 1500);
         }
+        KeyCode::Char('p') => {
+            app_state.compose_view_mode = !app_state.compose_view_mode;
+            let mode_text = if app_state.compose_view_mode {
+                "compose projects"
+            } else {
+                "containers"
+            };
+            // Reset selection when toggling view
+            app_state.list_state.select(Some(0));
+            app_state.table_state.select(Some(0));
+            toast_manager.show(&format!("Switched to {} view", mode_text), 1500);
+        }
 
         // Filter
         KeyCode::Char('f') => app_state.enter_filter_mode(),
+
+        // Container filter toggles
+        KeyCode::Char('+') => {
+            app_state.toggle_recent();
+            let filter_name = app_state.container_filter.display_name();
+            toast_manager.show(&format!("Switched to {} containers", filter_name), 1500);
+        }
+        KeyCode::Char('!') => {
+            app_state.toggle_all();
+            let filter_name = app_state.container_filter.display_name();
+            toast_manager.show(&format!("Switched to {} containers", filter_name), 1500);
+        }
+
         KeyCode::Esc => {
             if !app_state.filter_text.is_empty() {
                 app_state.clear_filter();
@@ -269,36 +324,70 @@ fn handle_visual_mode(
             app_state.go_to_first();
         }
         KeyCode::Char('s') => {
-            match actions::stop_selected_containers(app_state, &*config) {
-                Ok(_) => {
-                    let count = app_state.get_selected_indices().len();
-                    toast_manager.show(
-                        &format!(
-                            "Stopped {} container{}",
-                            count,
-                            if count == 1 { "" } else { "s" }
-                        ),
-                        2000,
-                    );
+            if app_state.compose_view_mode {
+                match actions::stop_selected_compose_projects(app_state, &*config) {
+                    Ok(_) => {
+                        let count = app_state.get_selected_indices().len();
+                        toast_manager.show(
+                            &format!(
+                                "Stopped {} project{}",
+                                count,
+                                if count == 1 { "" } else { "s" }
+                            ),
+                            2000,
+                        );
+                    }
+                    Err(e) => toast_manager.show(&format!("Error stopping projects: {}", e), 3000),
                 }
-                Err(e) => toast_manager.show(&format!("Error stopping containers: {}", e), 3000),
+            } else {
+                match actions::stop_selected_containers(app_state, &*config) {
+                    Ok(_) => {
+                        let count = app_state.get_selected_indices().len();
+                        toast_manager.show(
+                            &format!(
+                                "Stopped {} container{}",
+                                count,
+                                if count == 1 { "" } else { "s" }
+                            ),
+                            2000,
+                        );
+                    }
+                    Err(e) => toast_manager.show(&format!("Error stopping containers: {}", e), 3000),
+                }
             }
             app_state.enter_normal_mode();
         }
         KeyCode::Char('r') => {
-            match actions::restart_selected_containers(app_state, &*config) {
-                Ok(_) => {
-                    let count = app_state.get_selected_indices().len();
-                    toast_manager.show(
-                        &format!(
-                            "Restarted {} container{}",
-                            count,
-                            if count == 1 { "" } else { "s" }
-                        ),
-                        2000,
-                    );
+            if app_state.compose_view_mode {
+                match actions::restart_selected_compose_projects(app_state, &*config) {
+                    Ok(_) => {
+                        let count = app_state.get_selected_indices().len();
+                        toast_manager.show(
+                            &format!(
+                                "Restarted {} project{}",
+                                count,
+                                if count == 1 { "" } else { "s" }
+                            ),
+                            2000,
+                        );
+                    }
+                    Err(e) => toast_manager.show(&format!("Error restarting projects: {}", e), 3000),
                 }
-                Err(e) => toast_manager.show(&format!("Error restarting containers: {}", e), 3000),
+            } else {
+                match actions::restart_selected_containers(app_state, &*config) {
+                    Ok(_) => {
+                        let count = app_state.get_selected_indices().len();
+                        toast_manager.show(
+                            &format!(
+                                "Restarted {} container{}",
+                                count,
+                                if count == 1 { "" } else { "s" }
+                            ),
+                            2000,
+                        );
+                    }
+                    Err(e) => toast_manager.show(&format!("Error restarting containers: {}", e), 3000),
+                }
             }
             app_state.enter_normal_mode();
         }

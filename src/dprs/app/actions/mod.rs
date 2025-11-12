@@ -9,6 +9,7 @@
 //
 // These action handlers are used by the main application to respond to user input.
 
+pub mod compose_actions;
 pub mod copy_ip;
 pub mod open_browser;
 pub mod restart;
@@ -16,6 +17,10 @@ pub mod restart_selected;
 pub mod stop_container;
 pub mod stop_selected;
 
+pub use compose_actions::{
+    restart_compose_project, restart_selected_compose_projects, stop_compose_project,
+    stop_selected_compose_projects,
+};
 pub use copy_ip::copy_ip_address;
 pub use open_browser::open_browser;
 pub use restart::restart_container;

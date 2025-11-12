@@ -1,5 +1,6 @@
 // DPRS display modules
 
+pub mod compose_view;
 pub mod filter_input;
 pub mod hotkey_bar;
 pub mod process_list;

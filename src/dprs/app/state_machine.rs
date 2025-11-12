@@ -22,6 +22,23 @@ pub struct Container {
     pub ports: String,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ContainerFilter {
+    Running,
+    Recent,
+    All,
+}
+
+impl ContainerFilter {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            ContainerFilter::Running => "RUNNING",
+            ContainerFilter::Recent => "RECENT",
+            ContainerFilter::All => "ALL",
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct ProgressModal {
     pub message: String,
@@ -76,6 +93,8 @@ pub struct AppState {
     pub list_state: ListState,
     pub table_state: TableState,
     pub tabular_mode: bool,
+    pub compose_view_mode: bool,
+    pub container_filter: ContainerFilter,
     pub filter_mode: bool,
     pub filter_text: String,
     pub filtered_containers: Vec<usize>,
@@ -112,6 +131,24 @@ impl Default for AppState {
     }
 }
 
+/// Formats IP addresses for display: comma-separated, max 3 IPs
+fn format_ip_addresses(ip_string: &str) -> String {
+    let ips: Vec<&str> = ip_string
+        .split_whitespace()
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    if ips.is_empty() {
+        return String::new();
+    }
+
+    if ips.len() <= 3 {
+        ips.join(", ")
+    } else {
+        format!("{}, ... (+{})", ips[..3].join(", "), ips.len() - 3)
+    }
+}
+
 impl AppState {
     pub fn new() -> Self {
         let mut list_state = ListState::default();
@@ -125,6 +162,8 @@ impl AppState {
             list_state,
             table_state,
             tabular_mode: false,
+            compose_view_mode: false,
+            container_filter: ContainerFilter::Running,
             filter_mode: false,
             filter_text: String::new(),
             filtered_containers: Vec::new(),
@@ -208,12 +247,32 @@ impl AppState {
         self.containers.clear();
         self.new_container_indices.clear();
 
+        // Build docker ps command based on container filter
+        let mut args = vec!["ps"];
+
+        match self.container_filter {
+            ContainerFilter::Running => {
+                // Default: only running containers
+            }
+            ContainerFilter::Recent => {
+                // Show recently exited containers (last 10)
+                args.push("-a");
+                args.push("--filter");
+                args.push("status=exited");
+                args.push("--last");
+                args.push("10");
+            }
+            ContainerFilter::All => {
+                // Show all containers (running, stopped, exited)
+                args.push("-a");
+            }
+        }
+
+        args.push("--format");
+        args.push("{{.Names}}|{{.Image}}|{{.Status}}|{{.Ports}}");
+
         let output = Command::new("docker")
-            .args([
-                "ps",
-                "--format",
-                "{{.Names}}|{{.Image}}|{{.Status}}|{{.Ports}}",
-            ])
+            .args(&args)
             .output()
             .map_err(|e| Error::other(format!("Failed to execute docker command: {}", e)))?;
 
@@ -238,14 +297,17 @@ impl AppState {
                 let ip_output = Command::new("docker")
                     .arg("inspect")
                     .arg("--format")
-                    .arg("{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}")
+                    .arg("{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}")
                     .arg(name.as_str())
                     .output()
                     .map_err(|e| Error::other(format!("Failed to get container IP: {}", e)))?;
 
-                let ip_address = String::from_utf8_lossy(&ip_output.stdout)
+                let ip_address_raw = String::from_utf8_lossy(&ip_output.stdout)
                     .trim()
                     .to_string();
+
+                // Format IPs: comma-separated, max 3 IPs
+                let ip_address = format_ip_addresses(&ip_address_raw);
 
                 let is_new = !previous_names.contains(&name);
                 self.containers.push(Container {
@@ -346,7 +408,11 @@ impl AppState {
     }
 
     pub fn get_displayed_container_count(&self) -> usize {
-        if self.filter_text.is_empty() {
+        if self.compose_view_mode {
+            // In compose view mode, count projects instead of containers
+            use crate::dprs::display::compose_view::group_containers_by_project;
+            group_containers_by_project(self).len()
+        } else if self.filter_text.is_empty() {
             self.containers.len()
         } else {
             self.filtered_containers.len()
@@ -651,6 +717,36 @@ impl AppState {
 
     pub fn should_exit(&self) -> bool {
         self.exit_requested
+    }
+
+    // Toggle between running and recent containers
+    pub fn toggle_recent(&mut self) {
+        self.container_filter = match self.container_filter {
+            ContainerFilter::Running => ContainerFilter::Recent,
+            ContainerFilter::Recent => ContainerFilter::Running,
+            ContainerFilter::All => ContainerFilter::Recent,
+        };
+        self.load_containers();
+        // Reset selection
+        if !self.containers.is_empty() {
+            self.list_state.select(Some(0));
+            self.table_state.select(Some(0));
+        }
+    }
+
+    // Toggle between running and all, with special handling from recent
+    pub fn toggle_all(&mut self) {
+        self.container_filter = match self.container_filter {
+            ContainerFilter::Running => ContainerFilter::All,
+            ContainerFilter::Recent => ContainerFilter::All,
+            ContainerFilter::All => ContainerFilter::Running,
+        };
+        self.load_containers();
+        // Reset selection
+        if !self.containers.is_empty() {
+            self.list_state.select(Some(0));
+            self.table_state.select(Some(0));
+        }
     }
 }
 

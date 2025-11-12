@@ -20,6 +20,7 @@ use ratatui::{
 use tachyonfx::{CellFilter, Duration, EffectManager, Interpolation};
 
 use crate::dprs::app::state_machine::AppState;
+use crate::dprs::display::compose_view::render_compose_view;
 use crate::dprs::display::filter_input::render_filter_input;
 use crate::dprs::display::hotkey_bar::render_hotkey_bar;
 use crate::dprs::display::process_list::render_container_list;
@@ -63,8 +64,11 @@ pub fn draw<B: Backend>(
     // Render the hotkey bar
     render_hotkey_bar::<B>(f, chunks[0], &*config);
 
-    // Render container list (tabular or normal based on mode)
-    let container_area = if app_state.tabular_mode {
+    // Render container list (compose view, tabular, or normal based on mode)
+    let container_area = if app_state.compose_view_mode {
+        render_compose_view::<B>(f, app_state, chunks[1], &*config);
+        chunks[1]
+    } else if app_state.tabular_mode {
         render_container_table::<B>(f, app_state, chunks[1], &*config);
         chunks[1]
     } else {
@@ -143,6 +147,10 @@ fn render_status_line(
     };
 
     status_parts.push(format!("-- {} --", app_state.mode.display_name()));
+
+    // Container filter indicator
+    let filter_text = app_state.container_filter.display_name();
+    status_parts.push(format!("[{}]", filter_text));
 
     // Container info
     if let Some(container) = app_state.get_selected_container() {
