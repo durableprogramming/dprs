@@ -818,7 +818,7 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 
 [[package]]
 name = "dprs"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
  "ansi-to-tui",
  "bollard",

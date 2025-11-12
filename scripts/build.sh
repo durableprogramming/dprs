@@ -3,6 +3,6 @@
 set -e
 
 echo "Building release binaries..."
-cargo build --release
+cargo br
 
 echo "Build completed. Binaries available in target/release/"
