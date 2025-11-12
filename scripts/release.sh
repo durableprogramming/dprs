@@ -7,17 +7,10 @@ VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
 
 # Try to build static binaries with musl, fallback to regular build if it fails
 echo "Building static binaries with musl..."
-if ! cargo build --release --target x86_64-unknown-linux-musl 2>/dev/null; then
-    echo "musl build failed, falling back to regular build..."
-    cargo build --release
-    TARGET_DIR="target/release"
-    DEB_TARGET=""
-    RPM_TARGET=""
-else
-    TARGET_DIR="target/x86_64-unknown-linux-musl/release"
-    DEB_TARGET="--target x86_64-unknown-linux-musl"
-    RPM_TARGET="--target x86_64-unknown-linux-musl"
-fi
+cargo br
+TARGET_DIR="target/x86_64-unknown-linux-musl/release"
+DEB_TARGET="--target x86_64-unknown-linux-musl"
+RPM_TARGET="--target x86_64-unknown-linux-musl"
 
 # Build Debian package
 echo "Building Debian package..."
