@@ -5,17 +5,22 @@
   env.GREET = "devenv";
 
   # https://devenv.sh/packages/
-  packages = [ pkgs.git pkgs.xorg.libxcb pkgs.bashInteractive pkgs.cmake pkgs.xorg.libX11.dev pkgs.cargo-deb pkgs.cargo-generate-rpm];
+  packages = [ pkgs.git pkgs.xorg.libxcb pkgs.bashInteractive pkgs.cmake pkgs.xorg.libX11.dev pkgs.cargo-deb pkgs.zig ];
 
   # https://devenv.sh/languages/
   languages.rust.enable = true;
-  languages.rust.channel= "beta";
+  languages.rust.channel= "stable";
   languages.rust.components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer"];
+  languages.rust.targets = [ "x86_64-unknown-linux-musl" ];
 
 
   # https://devenv.sh/scripts/
   scripts.hello.exec = ''
     echo hello from $GREET
+  '';
+
+  scripts.cargo-build-release.exec = ''
+    cargo zigbuild --release --target x86_64-unknown-linux-musl "$@"
   '';
 
   enterShell = ''
