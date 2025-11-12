@@ -194,8 +194,12 @@ fn handle_normal_mode(
             if app_state.compose_view_mode {
                 if let Some(selected) = app_state.list_state.selected() {
                     match actions::stop_compose_project(app_state, selected, &*config) {
-                        Ok(_) => toast_manager.show("Stop command sent for project. Refreshing...", 2000),
-                        Err(e) => toast_manager.show(&format!("Error stopping project: {}", e), 3000),
+                        Ok(_) => {
+                            toast_manager.show("Stop command sent for project. Refreshing...", 2000)
+                        }
+                        Err(e) => {
+                            toast_manager.show(&format!("Error stopping project: {}", e), 3000)
+                        }
                     }
                 }
             } else {
@@ -208,7 +212,9 @@ fn handle_normal_mode(
         KeyCode::Char('c') => {
             if !app_state.compose_view_mode {
                 match actions::copy_ip_address(app_state) {
-                    Ok(ip) => toast_manager.show(&format!("IP address copied to clipboard: {}", ip), 2000),
+                    Ok(ip) => {
+                        toast_manager.show(&format!("IP address copied to clipboard: {}", ip), 2000)
+                    }
                     Err(e) => toast_manager.show(&format!("Error copying IP: {}", e), 3000),
                 }
             }
@@ -225,14 +231,19 @@ fn handle_normal_mode(
             if app_state.compose_view_mode {
                 if let Some(selected) = app_state.list_state.selected() {
                     match actions::restart_compose_project(app_state, selected, &*config) {
-                        Ok(_) => toast_manager.show("Restart command sent for project. Refreshing...", 2000),
-                        Err(e) => toast_manager.show(&format!("Error restarting project: {}", e), 3000),
+                        Ok(_) => toast_manager
+                            .show("Restart command sent for project. Refreshing...", 2000),
+                        Err(e) => {
+                            toast_manager.show(&format!("Error restarting project: {}", e), 3000)
+                        }
                     }
                 }
             } else {
                 match actions::restart_container(app_state, &*config) {
                     Ok(_) => toast_manager.show("Restart command sent. Refreshing list...", 2000),
-                    Err(e) => toast_manager.show(&format!("Error restarting container: {}", e), 3000),
+                    Err(e) => {
+                        toast_manager.show(&format!("Error restarting container: {}", e), 3000)
+                    }
                 }
             }
         }
@@ -352,7 +363,9 @@ fn handle_visual_mode(
                             2000,
                         );
                     }
-                    Err(e) => toast_manager.show(&format!("Error stopping containers: {}", e), 3000),
+                    Err(e) => {
+                        toast_manager.show(&format!("Error stopping containers: {}", e), 3000)
+                    }
                 }
             }
             app_state.enter_normal_mode();
@@ -371,7 +384,9 @@ fn handle_visual_mode(
                             2000,
                         );
                     }
-                    Err(e) => toast_manager.show(&format!("Error restarting projects: {}", e), 3000),
+                    Err(e) => {
+                        toast_manager.show(&format!("Error restarting projects: {}", e), 3000)
+                    }
                 }
             } else {
                 match actions::restart_selected_containers(app_state, &*config) {
@@ -386,7 +401,9 @@ fn handle_visual_mode(
                             2000,
                         );
                     }
-                    Err(e) => toast_manager.show(&format!("Error restarting containers: {}", e), 3000),
+                    Err(e) => {
+                        toast_manager.show(&format!("Error restarting containers: {}", e), 3000)
+                    }
                 }
             }
             app_state.enter_normal_mode();

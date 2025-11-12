@@ -53,7 +53,12 @@ pub fn restart_selected_compose_projects(
         for (idx, &project_idx) in selected_indices.iter().enumerate() {
             if let Some(project) = projects.get(project_idx) {
                 let _ = progress_sender.send(ProgressUpdate::Update {
-                    message: format!("Restarting {} ({}/{})", project.project_name, idx + 1, total),
+                    message: format!(
+                        "Restarting {} ({}/{})",
+                        project.project_name,
+                        idx + 1,
+                        total
+                    ),
                     percentage: (idx as f32 / total as f32) * 100.0,
                 });
 
@@ -105,8 +110,10 @@ fn restart_project(
     config: &Config,
 ) -> Result<(), Error> {
     let total = project.containers.len();
-    let progress_sender =
-        app_state.start_progress(format!("Restarting project {} (0/{})", project.project_name, total));
+    let progress_sender = app_state.start_progress(format!(
+        "Restarting project {} (0/{})",
+        project.project_name, total
+    ));
 
     let project_clone = project.clone();
     let show_progress = config.general.experimental_fx;
@@ -115,12 +122,7 @@ fn restart_project(
         for (idx, container_name) in project_clone.containers.iter().enumerate() {
             if show_progress {
                 let _ = progress_sender.send(ProgressUpdate::Update {
-                    message: format!(
-                        "Restarting {} ({}/{})",
-                        container_name,
-                        idx + 1,
-                        total
-                    ),
+                    message: format!("Restarting {} ({}/{})", container_name, idx + 1, total),
                     percentage: (idx as f32 / total as f32) * 100.0,
                 });
             }
@@ -142,8 +144,10 @@ fn stop_project(
     config: &Config,
 ) -> Result<(), Error> {
     let total = project.containers.len();
-    let progress_sender =
-        app_state.start_progress(format!("Stopping project {} (0/{})", project.project_name, total));
+    let progress_sender = app_state.start_progress(format!(
+        "Stopping project {} (0/{})",
+        project.project_name, total
+    ));
 
     let project_clone = project.clone();
     let show_progress = config.general.experimental_fx;
@@ -152,12 +156,7 @@ fn stop_project(
         for (idx, container_name) in project_clone.containers.iter().enumerate() {
             if show_progress {
                 let _ = progress_sender.send(ProgressUpdate::Update {
-                    message: format!(
-                        "Stopping {} ({}/{})",
-                        container_name,
-                        idx + 1,
-                        total
-                    ),
+                    message: format!("Stopping {} ({}/{})", container_name, idx + 1, total),
                     percentage: (idx as f32 / total as f32) * 100.0,
                 });
             }

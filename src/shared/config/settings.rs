@@ -119,7 +119,7 @@ impl Default for Config {
 
         let mut custom_colors = HashMap::new();
         // Selection and visual mode colors
-        custom_colors.insert("selected_bg".to_string(), "#4a4af7".to_string());
+        custom_colors.insert("selected_bg".to_string(), "#1a1a80".to_string());
         custom_colors.insert("visual_bg".to_string(), "#5D2F00".to_string());
         custom_colors.insert("search_highlight".to_string(), "#4D2D5F".to_string());
 
@@ -127,8 +127,8 @@ impl Default for Config {
         custom_colors.insert("container_name".to_string(), "#00AA00".to_string());
         custom_colors.insert("container_image".to_string(), "#AAAA00".to_string());
         custom_colors.insert("container_status".to_string(), "#00AAAA".to_string());
-        custom_colors.insert("container_ip".to_string(), "#0000AA".to_string());
-        custom_colors.insert("container_ports".to_string(), "#AA00AA".to_string());
+        custom_colors.insert("container_ip".to_string(), "#7777FF".to_string());
+        custom_colors.insert("container_ports".to_string(), "#DD55FF".to_string());
 
         // Tabular view specific colors
         custom_colors.insert("container_image_tabular".to_string(), "#00AAAA".to_string());
@@ -136,8 +136,8 @@ impl Default for Config {
             "container_status_tabular".to_string(),
             "#0000AA".to_string(),
         );
-        custom_colors.insert("container_ip_tabular".to_string(), "#AA00AA".to_string());
-        custom_colors.insert("container_ports_tabular".to_string(), "#CCCCCC".to_string());
+        custom_colors.insert("container_ip_tabular".to_string(), "#7777FF".to_string());
+        custom_colors.insert("container_ports_tabular".to_string(), "#DD55FF".to_string());
 
         // Mode indicator colors
         custom_colors.insert("mode_normal".to_string(), "#00AA00".to_string());

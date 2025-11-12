@@ -191,7 +191,7 @@ pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &LogView, area: Rect
         // Calculate how many visual lines this log entry will take when wrapped
         let message_width = entry.message.chars().count();
         let lines_needed = if available_width > 0 {
-            (message_width + available_width - 1) / available_width
+            message_width.div_ceil(available_width)
         } else {
             1
         };

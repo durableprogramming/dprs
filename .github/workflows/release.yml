@@ -17,13 +17,13 @@ jobs:
     strategy:
       matrix:
         include:
-          # Linux builds
+          # Linux builds (statically linked with musl)
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            target: x86_64-unknown-linux-musl
             artifact_name: dprs-linux-x64
             cross: false
           - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
+            target: aarch64-unknown-linux-musl
             artifact_name: dprs-linux-arm64
             cross: true
 
@@ -52,6 +52,10 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ matrix.target }}
+
+    - name: Install musl tools for Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get update && sudo apt-get install -y musl-tools
 
     - name: Install cross-compilation tools
       if: matrix.cross
@@ -221,53 +225,9 @@ jobs:
       run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
       continue-on-error: true  # May already be published
 
-  # Build and publish Docker images (Tier 3 automation support)
-  publish-docker:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Extract version from tag
-      id: version
-      run: |
-        VERSION=${GITHUB_REF#refs/tags/v}
-        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-        echo "MAJOR=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
-        echo "MINOR=$(echo $VERSION | cut -d. -f1-2)" >> $GITHUB_OUTPUT
-
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        platforms: linux/amd64,linux/arm64
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.MAJOR }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.MINOR }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
   # Create GitHub Release with all artifacts
   release:
-    needs: [build-binaries, build-deb, build-rpm, publish-crates, publish-docker]
+    needs: [build-binaries, build-deb, build-rpm, publish-crates]
     runs-on: ubuntu-latest
     permissions:
       contents: write
