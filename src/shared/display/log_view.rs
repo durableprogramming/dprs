@@ -40,6 +40,8 @@ pub struct LogView {
     max_logs: usize,
     scroll_position: usize,
     follow_mode: bool,
+    parsed_cache: Vec<Option<Vec<Line<'static>>>>,
+    last_recolor_time: Instant,
 }
 
 impl LogView {
@@ -49,6 +51,8 @@ impl LogView {
             max_logs,
             scroll_position: 0,
             follow_mode: true,
+            parsed_cache: Vec::new(),
+            last_recolor_time: Instant::now(),
         }
     }
 
@@ -60,10 +64,14 @@ impl LogView {
         };
 
         self.logs.push_back(log_entry);
+        self.parsed_cache.push(None); // Mark as unparsed
 
         // Trim logs if we exceed max capacity
         if self.logs.len() > self.max_logs {
             self.logs.pop_front();
+            if !self.parsed_cache.is_empty() {
+                self.parsed_cache.remove(0);
+            }
         }
 
         // Auto-scroll to bottom when new logs come in if follow mode is enabled
@@ -127,49 +135,84 @@ impl LogView {
     }
 }
 
-fn parse_log_with_tailspin<'a>(message: &'a str, config: &'a Config) -> Vec<Span<'a>> {
+fn parse_log_with_tailspin(message: &str, config: &Config) -> Vec<Line<'static>> {
     // Create a tailspin highlighter with default settings
     let highlighter = Highlighter::default();
 
     // Apply tailspin highlighting to get ANSI-colored string
     let highlighted_message = highlighter.apply(message);
 
-    // Convert ANSI-colored string to ratatui Text and extract spans
+    // Convert ANSI-colored string to ratatui Text and extract lines
     match highlighted_message.as_ref().into_text() {
         Ok(text) => {
-            // Extract spans from the first line of the text
-            if let Some(line) = text.lines.first() {
-                line.spans.clone()
-            } else {
-                // Fallback to plain text if conversion fails
-                vec![Span::styled(
-                    message,
-                    Style::default()
-                        .bg(config.get_color("background_main"))
-                        .fg(config.get_color("text_main")),
-                )]
-            }
+            // Convert borrowed spans to owned spans
+            text.lines.into_iter().map(|line| {
+                let owned_spans: Vec<Span<'static>> = line.spans.into_iter().map(|span| {
+                    Span::styled(span.content.into_owned(), span.style)
+                }).collect();
+                Line::from(owned_spans)
+            }).collect()
         }
         Err(_) => {
             // Fallback to plain text if conversion fails
-            vec![Span::styled(
-                message,
+            vec![Line::from(vec![Span::styled(
+                message.to_string(),
                 Style::default()
                     .bg(config.get_color("background_main"))
                     .fg(config.get_color("text_main")),
-            )]
+            )])]
         }
     }
 }
 
-pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &LogView, area: Rect, config: &Config) {
+pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &mut LogView, area: Rect, config: &Config) {
     let logs = &log_view.logs;
+    let now = Instant::now();
+    let should_recolor = now.duration_since(log_view.last_recolor_time).as_millis() >= 100;
 
+    // Ensure cache is the right size
+    while log_view.parsed_cache.len() < logs.len() {
+        log_view.parsed_cache.push(None);
+    }
+
+    // Parse unparsed lines if 100ms has passed
+    if should_recolor {
+        for (idx, entry) in logs.iter().enumerate() {
+            if log_view.parsed_cache[idx].is_none() {
+                let parsed = parse_log_with_tailspin(&entry.message, config);
+                log_view.parsed_cache[idx] = Some(parsed);
+            }
+        }
+        log_view.last_recolor_time = now;
+    }
+
+    // Build log lines from cache or plain text
     let log_lines: Vec<Line> = logs
         .iter()
-        .map(|entry| {
-            let spans = parse_log_with_tailspin(&entry.message, config);
-            Line::from(spans)
+        .enumerate()
+        .map(|(idx, entry)| {
+            if let Some(Some(cached_lines)) = log_view.parsed_cache.get(idx) {
+                // Use cached parsed lines (flatten multiple lines into one if needed)
+                if cached_lines.is_empty() {
+                    Line::from(vec![Span::raw("")])
+                } else if cached_lines.len() == 1 {
+                    cached_lines[0].clone()
+                } else {
+                    // Flatten multiple lines into one
+                    let all_spans: Vec<Span> = cached_lines.iter()
+                        .flat_map(|line| line.spans.clone())
+                        .collect();
+                    Line::from(all_spans)
+                }
+            } else {
+                // Not yet parsed, render plain text
+                Line::from(vec![Span::styled(
+                    entry.message.clone(),
+                    Style::default()
+                        .bg(config.get_color("background_main"))
+                        .fg(config.get_color("text_main")),
+                )])
+            }
         })
         .collect();
 
@@ -188,10 +231,23 @@ pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &LogView, area: Rect
         if idx >= log_view.scroll_position {
             break;
         }
-        // Calculate how many visual lines this log entry will take when wrapped
-        let message_width = entry.message.chars().count();
+        // Get the actual line to calculate its width
+        let line_to_measure = if let Some(Some(cached_lines)) = log_view.parsed_cache.get(idx) {
+            if !cached_lines.is_empty() {
+                // Calculate width from all spans
+                cached_lines.iter()
+                    .flat_map(|line| line.spans.iter())
+                    .map(|span| span.content.chars().count())
+                    .sum()
+            } else {
+                0
+            }
+        } else {
+            entry.message.chars().count()
+        };
+
         let lines_needed = if available_width > 0 {
-            message_width.div_ceil(available_width)
+            line_to_measure.div_ceil(available_width)
         } else {
             1
         };

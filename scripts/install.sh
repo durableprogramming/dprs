@@ -28,10 +28,24 @@ fi
 
 # Build and install the application
 echo "Building and installing DPRS..."
-cargo build --release
 
-cp ./target/release/dprs ~/.local/bin/dprs
-cp ./target/release/dplw ~/.local/bin/dplw
+# Check if we're on Linux and can use zigbuild for better cross-compilation
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    echo "Using cargo-zigbuild for optimized Linux build..."
+    cargo br
+else
+    cargo build --release
+fi
+
+# Determine the correct target directory
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    TARGET_DIR="./target/x86_64-unknown-linux-musl/release"
+else
+    TARGET_DIR="./target/release"
+fi
+
+cp "$TARGET_DIR/dprs" ~/.local/bin/dprs
+cp "$TARGET_DIR/dplw" ~/.local/bin/dplw
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}DPRS installed successfully!${NC}"

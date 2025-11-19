@@ -90,7 +90,7 @@ pub fn run_app<B: Backend>(
                             }
                         }
 
-                        render_log_view::<B>(f, current_log_view, chunks[1], &config);
+                        render_log_view::<B>(f, &mut *current_log_view, chunks[1], &config);
                         log_area_height = chunks[1].height as usize;
                     }
                 }
