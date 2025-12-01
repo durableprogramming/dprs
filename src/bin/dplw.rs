@@ -20,11 +20,15 @@ use ratatui::{
 };
 use std::{io, io::stdout, time::Duration};
 
-use dprs::display::log_tabs::{render_log_tabs, LogTabs};
-use dprs::docker_log_watcher::DockerLogManager;
-use dprs::log_view::{render_log_view, LogLevel, LogView};
+use dprs::shared::config::Config;
+use dprs::shared::display::log_tabs::{render_log_tabs, LogTabs};
+use dprs::shared::docker::docker_log_watcher::DockerLogManager;
+use dprs::shared::display::log_view::{render_log_view, LogLevel, LogView};
 
 fn main() -> Result<(), io::Error> {
+    // Load configuration
+    let config = Config::load();
+
     // Setup terminal
     enable_raw_mode()?;
     stdout().execute(EnterAlternateScreen)?;
@@ -36,7 +40,7 @@ fn main() -> Result<(), io::Error> {
     
     // Ensure cleanup happens even if there's a panic
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        run_app(&mut terminal, &mut log_manager)
+        run_app(&mut terminal, &mut log_manager, &config)
     }));
 
     // Always restore terminal, regardless of what happened
@@ -62,6 +66,7 @@ fn main() -> Result<(), io::Error> {
 fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
     log_manager: &mut DockerLogManager,
+    config: &Config,
 ) -> Result<(), io::Error> {
     // Initialize log manager
 
@@ -83,6 +88,7 @@ fn run_app<B: Backend>(
     }
 
     let mut log_tabs = LogTabs::new(container_names);
+    let mut visible_height = 10; // Default value, will be updated in draw
 
     loop {
         terminal.draw(|f| {
@@ -101,8 +107,11 @@ fn run_app<B: Backend>(
                 )
                 .split(size);
 
+            // Store visible height for pagination
+            visible_height = chunks[1].height as usize;
+
             // Render tabs
-            render_log_tabs::<B>(f, &log_tabs, chunks[0]);
+            render_log_tabs::<B>(f, &log_tabs, chunks[0], config);
 
             // Render logs for selected container
             if let Some(active_tab) = log_tabs.index.checked_sub(0) {
@@ -128,7 +137,7 @@ fn run_app<B: Backend>(
                             }
                         }
 
-                        render_log_view::<B>(f, current_log_view, chunks[1]);
+                        render_log_view::<B>(f, current_log_view, chunks[1], config);
                     }
                 }
             }
@@ -212,14 +221,14 @@ fn run_app<B: Backend>(
                     KeyCode::PageUp => {
                         if let Some(active_tab) = log_tabs.index.checked_sub(0) {
                             if active_tab < log_views.len() {
-                                log_views[active_tab].page_up();
+                                log_views[active_tab].page_up(visible_height);
                             }
                         }
                     },
                     KeyCode::PageDown => {
                         if let Some(active_tab) = log_tabs.index.checked_sub(0) {
                             if active_tab < log_views.len() {
-                                log_views[active_tab].page_down();
+                                log_views[active_tab].page_down(visible_height);
                             }
                         }
                     },
