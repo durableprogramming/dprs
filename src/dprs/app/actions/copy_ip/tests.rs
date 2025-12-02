@@ -72,4 +72,51 @@ fn test_copy_ip_invalid_index() {
     assert_eq!(result.unwrap_err(), "Invalid container index");
 }
 
+#[test]
+fn test_extract_first_ip_from_comma_separated() {
+    // Test with comma-separated IPs
+    assert_eq!(
+        extract_first_ip("192.168.1.100, 172.17.0.2"),
+        "192.168.1.100"
+    );
+    assert_eq!(
+        extract_first_ip("10.0.0.1, 10.0.0.2, 10.0.0.3"),
+        "10.0.0.1"
+    );
+}
+
+#[test]
+fn test_extract_first_ip_from_space_separated() {
+    // Test with space-separated IPs
+    assert_eq!(
+        extract_first_ip("192.168.1.100 172.17.0.2"),
+        "192.168.1.100"
+    );
+}
+
+#[test]
+fn test_extract_first_ip_from_concatenated() {
+    // Test with concatenated IPs (no separator)
+    assert_eq!(
+        extract_first_ip("192.168.1.100172.17.0.2"),
+        "192.168.1.100"
+    );
+}
+
+#[test]
+fn test_extract_first_ip_single() {
+    // Test with single IP
+    assert_eq!(extract_first_ip("192.168.1.100"), "192.168.1.100");
+}
+
+#[test]
+fn test_extract_first_ip_with_whitespace() {
+    // Test with leading/trailing whitespace
+    assert_eq!(extract_first_ip("  192.168.1.100  "), "192.168.1.100");
+    assert_eq!(
+        extract_first_ip("  192.168.1.100, 172.17.0.2  "),
+        "192.168.1.100"
+    );
+}
+
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

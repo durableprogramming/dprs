@@ -131,10 +131,12 @@ impl Default for AppState {
     }
 }
 
-/// Formats IP addresses for display: comma-separated, max 3 IPs
+/// Formats IP addresses for display: comma-separated with space, max 3 IPs
 fn format_ip_addresses(ip_string: &str) -> String {
+    // Split by comma or whitespace to handle both formats
     let ips: Vec<&str> = ip_string
-        .split_whitespace()
+        .split(|c| c == ',' || c == ' ')
+        .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();
 
@@ -306,7 +308,7 @@ impl AppState {
                     .trim()
                     .to_string();
 
-                // Format IPs: comma-separated, max 3 IPs
+                // Format IPs: comma-separated with space, max 3 IPs
                 let ip_address = format_ip_addresses(&ip_address_raw);
 
                 let is_new = !previous_names.contains(&name);
