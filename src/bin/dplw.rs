@@ -258,7 +258,6 @@ fn run_app<B: Backend>(
 }
 
 #[cfg(test)]
-
 mod tests {
     use super::*;
     use std::sync::{Arc, Mutex};

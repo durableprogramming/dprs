@@ -135,7 +135,7 @@ impl Default for AppState {
 fn format_ip_addresses(ip_string: &str) -> String {
     // Split by comma or whitespace to handle both formats
     let ips: Vec<&str> = ip_string
-        .split(|c| c == ',' || c == ' ')
+        .split([',', ' '])
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .collect();
