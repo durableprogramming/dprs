@@ -146,12 +146,17 @@ fn parse_log_with_tailspin(message: &str, config: &Config) -> Vec<Line<'static>>
     match highlighted_message.as_ref().into_text() {
         Ok(text) => {
             // Convert borrowed spans to owned spans
-            text.lines.into_iter().map(|line| {
-                let owned_spans: Vec<Span<'static>> = line.spans.into_iter().map(|span| {
-                    Span::styled(span.content.into_owned(), span.style)
-                }).collect();
-                Line::from(owned_spans)
-            }).collect()
+            text.lines
+                .into_iter()
+                .map(|line| {
+                    let owned_spans: Vec<Span<'static>> = line
+                        .spans
+                        .into_iter()
+                        .map(|span| Span::styled(span.content.into_owned(), span.style))
+                        .collect();
+                    Line::from(owned_spans)
+                })
+                .collect()
         }
         Err(_) => {
             // Fallback to plain text if conversion fails
@@ -165,7 +170,12 @@ fn parse_log_with_tailspin(message: &str, config: &Config) -> Vec<Line<'static>>
     }
 }
 
-pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &mut LogView, area: Rect, config: &Config) {
+pub fn render_log_view<B: Backend>(
+    f: &mut Frame,
+    log_view: &mut LogView,
+    area: Rect,
+    config: &Config,
+) {
     let logs = &log_view.logs;
     let now = Instant::now();
     let should_recolor = now.duration_since(log_view.last_recolor_time).as_millis() >= 100;
@@ -199,7 +209,8 @@ pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &mut LogView, area: 
                     cached_lines[0].clone()
                 } else {
                     // Flatten multiple lines into one
-                    let all_spans: Vec<Span> = cached_lines.iter()
+                    let all_spans: Vec<Span> = cached_lines
+                        .iter()
                         .flat_map(|line| line.spans.clone())
                         .collect();
                     Line::from(all_spans)
@@ -235,7 +246,8 @@ pub fn render_log_view<B: Backend>(f: &mut Frame, log_view: &mut LogView, area: 
         let line_to_measure = if let Some(Some(cached_lines)) = log_view.parsed_cache.get(idx) {
             if !cached_lines.is_empty() {
                 // Calculate width from all spans
-                cached_lines.iter()
+                cached_lines
+                    .iter()
                     .flat_map(|line| line.spans.iter())
                     .map(|span| span.content.chars().count())
                     .sum()

@@ -22,8 +22,8 @@ use std::{io, io::stdout, time::Duration};
 
 use dprs::shared::config::Config;
 use dprs::shared::display::log_tabs::{render_log_tabs, LogTabs};
-use dprs::shared::docker::docker_log_watcher::DockerLogManager;
 use dprs::shared::display::log_view::{render_log_view, LogLevel, LogView};
+use dprs::shared::docker::docker_log_watcher::DockerLogManager;
 
 fn main() -> Result<(), io::Error> {
     // Load configuration
@@ -37,7 +37,7 @@ fn main() -> Result<(), io::Error> {
 
     let mut log_manager = DockerLogManager::new();
     log_manager.start_watching_all_containers()?;
-    
+
     // Ensure cleanup happens even if there's a panic
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         run_app(&mut terminal, &mut log_manager, &config)
@@ -72,7 +72,7 @@ fn run_app<B: Backend>(
 
     // Create log views for each container (one per container)
     let mut log_views: Vec<LogView> = Vec::new();
-    
+
     // Create tabs for container selection
     let container_names: Vec<String> = (0..log_manager.watcher_count())
         .filter_map(|i| {
@@ -120,17 +120,17 @@ fn run_app<B: Backend>(
                         // Update logs for current container if needed
                         let current_log_view = &mut log_views[active_tab];
                         let current_logs = watcher.get_logs();
-                        
+
                         // Only update if we have a different number of logs
                         if current_log_view.get_log_count() != current_logs.len() {
                             // Preserve scroll position
                             let scroll_pos = current_log_view.get_scroll_position();
                             *current_log_view = LogView::new(1000);
-                            
+
                             for log_line in current_logs {
                                 current_log_view.add_log(log_line, LogLevel::Info);
                             }
-                            
+
                             // Restore scroll position if it's still valid
                             if scroll_pos < current_log_view.get_log_count() {
                                 current_log_view.set_scroll_position(scroll_pos);
@@ -196,42 +196,42 @@ fn run_app<B: Backend>(
                                 log_views[active_tab].scroll_up();
                             }
                         }
-                    },
+                    }
                     KeyCode::Down => {
                         if let Some(active_tab) = log_tabs.index.checked_sub(0) {
                             if active_tab < log_views.len() {
                                 log_views[active_tab].scroll_down();
                             }
                         }
-                    },
+                    }
                     KeyCode::Home => {
                         if let Some(active_tab) = log_tabs.index.checked_sub(0) {
                             if active_tab < log_views.len() {
                                 log_views[active_tab].scroll_to_top();
                             }
                         }
-                    },
+                    }
                     KeyCode::End => {
                         if let Some(active_tab) = log_tabs.index.checked_sub(0) {
                             if active_tab < log_views.len() {
                                 log_views[active_tab].scroll_to_bottom();
                             }
                         }
-                    },
+                    }
                     KeyCode::PageUp => {
                         if let Some(active_tab) = log_tabs.index.checked_sub(0) {
                             if active_tab < log_views.len() {
                                 log_views[active_tab].page_up(visible_height);
                             }
                         }
-                    },
+                    }
                     KeyCode::PageDown => {
                         if let Some(active_tab) = log_tabs.index.checked_sub(0) {
                             if active_tab < log_views.len() {
                                 log_views[active_tab].page_down(visible_height);
                             }
                         }
-                    },
+                    }
                     KeyCode::Char('r') => {
                         log_manager.refresh()?;
                         // Update tabs with new container names
@@ -243,7 +243,7 @@ fn run_app<B: Backend>(
                             })
                             .collect();
                         log_tabs = LogTabs::new(container_names.clone());
-                        
+
                         // Recreate log views for the new containers
                         log_views.clear();
                         for _ in 0..container_names.len() {

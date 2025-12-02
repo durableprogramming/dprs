@@ -79,10 +79,7 @@ fn test_extract_first_ip_from_comma_separated() {
         extract_first_ip("192.168.1.100, 172.17.0.2"),
         "192.168.1.100"
     );
-    assert_eq!(
-        extract_first_ip("10.0.0.1, 10.0.0.2, 10.0.0.3"),
-        "10.0.0.1"
-    );
+    assert_eq!(extract_first_ip("10.0.0.1, 10.0.0.2, 10.0.0.3"), "10.0.0.1");
 }
 
 #[test]
@@ -97,10 +94,7 @@ fn test_extract_first_ip_from_space_separated() {
 #[test]
 fn test_extract_first_ip_from_concatenated() {
     // Test with concatenated IPs (no separator)
-    assert_eq!(
-        extract_first_ip("192.168.1.100172.17.0.2"),
-        "192.168.1.100"
-    );
+    assert_eq!(extract_first_ip("192.168.1.100172.17.0.2"), "192.168.1.100");
 }
 
 #[test]
