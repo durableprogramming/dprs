@@ -2,5 +2,3 @@
 br = "zigbuild --release --target x86_64-unknown-linux-musl"
 b = "zigbuild --target x86_64-unknown-linux-musl"
 
-[build]
-target = "x86_64-unknown-linux-musl"

@@ -36,39 +36,44 @@ fn extract_first_ip(ip_string: &str) -> String {
     // Trim any leading/trailing whitespace first
     let trimmed = ip_string.trim();
 
-    // First try splitting by comma or whitespace
-    if let Some(first) = trimmed.split(&[',', ' '][..]).next() {
-        let first_trimmed = first.trim();
-        if !first_trimmed.is_empty() {
-            return first_trimmed.to_string();
-        }
-    }
-
-    // If no separators, parse character by character to extract first valid IP
+    // Parse character by character to extract first valid IP
     let mut result = String::new();
     let mut dot_count = 0;
+    let mut char_indices = trimmed.char_indices().peekable();
 
-    for ch in trimmed.chars() {
-        if ch.is_ascii_digit() || ch == '.' || ch == ':' {
+    while let Some((_idx, ch)) = char_indices.next() {
+        if ch.is_ascii_digit() {
             result.push(ch);
-            if ch == '.' {
-                dot_count += 1;
-            }
+        } else if ch == '.' {
+            result.push(ch);
+            dot_count += 1;
             // IPv4 has 3 dots, stop after we've captured a complete IP
             if dot_count == 3 {
-                // Continue until we hit a non-IP character or complete the last octet
-                for next_ch in trimmed[result.len()..].chars() {
-                    if next_ch.is_ascii_digit() {
-                        result.push(next_ch);
+                // Continue until we hit a non-digit to complete the last octet
+                // IPv4 octets are at most 3 digits
+                let mut octet_digits = 0;
+                while let Some((_, next_ch)) = char_indices.peek() {
+                    if next_ch.is_ascii_digit() && octet_digits < 3 {
+                        result.push(*next_ch);
+                        char_indices.next();
+                        octet_digits += 1;
                     } else {
                         break;
                     }
                 }
                 break;
             }
-        } else if !result.is_empty() {
+        } else if ch == ',' || ch.is_whitespace() {
+            // If we've collected an IP, stop here
+            if !result.is_empty() {
+                break;
+            }
+            // Otherwise skip the separator and continue
+        } else {
             // Hit a non-IP character after starting to collect
-            break;
+            if !result.is_empty() {
+                break;
+            }
         }
     }
 
