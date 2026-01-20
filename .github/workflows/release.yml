@@ -323,14 +323,14 @@ jobs:
 
           **Debian/Ubuntu**:
           ```bash
-          wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/dprs_*.deb
-          sudo dpkg -i dprs_*.deb
+          wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/dprs_${{ github.ref_name }}_amd64.deb
+          sudo dpkg -i dprs_${{ github.ref_name }}_amd64.deb
           ```
 
           **Fedora/RHEL**:
           ```bash
-          wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/dprs-*.rpm
-          sudo rpm -i dprs-*.rpm
+          wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/dprs-${{ github.ref_name }}-1.x86_64.rpm
+          sudo rpm -i dprs-${{ github.ref_name }}-1.x86_64.rpm
           ```
 
           ### Docker

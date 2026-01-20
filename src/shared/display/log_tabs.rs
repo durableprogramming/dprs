@@ -26,10 +26,15 @@ impl LogTabs {
     }
 
     pub fn next(&mut self) {
-        self.index = (self.index + 1) % self.titles.len();
+        if !self.titles.is_empty() {
+            self.index = (self.index + 1) % self.titles.len();
+        }
     }
 
     pub fn previous(&mut self) {
+        if self.titles.is_empty() {
+            return;
+        }
         if self.index > 0 {
             self.index -= 1;
         } else {
@@ -45,6 +50,75 @@ impl LogTabs {
 
     pub fn get_active_tab_name(&self) -> Option<&String> {
         self.titles.get(self.index)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_tabs() {
+        let mut tabs = LogTabs::new(vec![]);
+        assert_eq!(tabs.index, 0);
+        assert_eq!(tabs.titles.len(), 0);
+
+        // Test that next and previous don't panic with empty tabs
+        tabs.next();
+        assert_eq!(tabs.index, 0);
+
+        tabs.previous();
+        assert_eq!(tabs.index, 0);
+
+        // Test that get_active_tab_name returns None
+        assert_eq!(tabs.get_active_tab_name(), None);
+
+        // Test that set_index doesn't panic
+        tabs.set_index(0);
+        assert_eq!(tabs.index, 0);
+
+        tabs.set_index(5);
+        assert_eq!(tabs.index, 0); // Index should not change
+    }
+
+    #[test]
+    fn test_single_tab() {
+        let mut tabs = LogTabs::new(vec!["container1".to_string()]);
+        assert_eq!(tabs.index, 0);
+
+        tabs.next();
+        assert_eq!(tabs.index, 0); // Wraps around to 0
+
+        tabs.previous();
+        assert_eq!(tabs.index, 0); // Wraps around to 0
+
+        assert_eq!(tabs.get_active_tab_name(), Some(&"container1".to_string()));
+    }
+
+    #[test]
+    fn test_multiple_tabs_navigation() {
+        let mut tabs = LogTabs::new(vec![
+            "container1".to_string(),
+            "container2".to_string(),
+            "container3".to_string(),
+        ]);
+
+        assert_eq!(tabs.index, 0);
+
+        tabs.next();
+        assert_eq!(tabs.index, 1);
+
+        tabs.next();
+        assert_eq!(tabs.index, 2);
+
+        tabs.next();
+        assert_eq!(tabs.index, 0); // Wraps around
+
+        tabs.previous();
+        assert_eq!(tabs.index, 2); // Wraps to last
+
+        tabs.previous();
+        assert_eq!(tabs.index, 1);
     }
 }
 

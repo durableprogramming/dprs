@@ -52,6 +52,11 @@ pub fn restart_selected_compose_projects(
     std::thread::spawn(move || {
         for (idx, &project_idx) in selected_indices.iter().enumerate() {
             if let Some(project) = projects.get(project_idx) {
+                let percentage = if total > 0 {
+                    (idx as f32 / total as f32) * 100.0
+                } else {
+                    0.0
+                };
                 let _ = progress_sender.send(ProgressUpdate::Update {
                     message: format!(
                         "Restarting {} ({}/{})",
@@ -59,7 +64,7 @@ pub fn restart_selected_compose_projects(
                         idx + 1,
                         total
                     ),
-                    percentage: (idx as f32 / total as f32) * 100.0,
+                    percentage,
                 });
 
                 restart_project_sync(project);
@@ -89,9 +94,14 @@ pub fn stop_selected_compose_projects(
     std::thread::spawn(move || {
         for (idx, &project_idx) in selected_indices.iter().enumerate() {
             if let Some(project) = projects.get(project_idx) {
+                let percentage = if total > 0 {
+                    (idx as f32 / total as f32) * 100.0
+                } else {
+                    0.0
+                };
                 let _ = progress_sender.send(ProgressUpdate::Update {
                     message: format!("Stopping {} ({}/{})", project.project_name, idx + 1, total),
-                    percentage: (idx as f32 / total as f32) * 100.0,
+                    percentage,
                 });
 
                 stop_project_sync(project);
@@ -121,9 +131,14 @@ fn restart_project(
     std::thread::spawn(move || {
         for (idx, container_name) in project_clone.containers.iter().enumerate() {
             if show_progress {
+                let percentage = if total > 0 {
+                    (idx as f32 / total as f32) * 100.0
+                } else {
+                    0.0
+                };
                 let _ = progress_sender.send(ProgressUpdate::Update {
                     message: format!("Restarting {} ({}/{})", container_name, idx + 1, total),
-                    percentage: (idx as f32 / total as f32) * 100.0,
+                    percentage,
                 });
             }
 
@@ -155,9 +170,14 @@ fn stop_project(
     std::thread::spawn(move || {
         for (idx, container_name) in project_clone.containers.iter().enumerate() {
             if show_progress {
+                let percentage = if total > 0 {
+                    (idx as f32 / total as f32) * 100.0
+                } else {
+                    0.0
+                };
                 let _ = progress_sender.send(ProgressUpdate::Update {
                     message: format!("Stopping {} ({}/{})", container_name, idx + 1, total),
-                    percentage: (idx as f32 / total as f32) * 100.0,
+                    percentage,
                 });
             }
 
@@ -186,6 +206,57 @@ fn stop_project_sync(project: &ComposeProject) {
         let _ = Command::new("docker")
             .args(["stop", container_name])
             .output();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_percentage_calculation_with_zero_total() {
+        // Test that percentage calculation doesn't panic with zero total
+        let total = 0;
+        let idx = 0;
+
+        let percentage = if total > 0 {
+            (idx as f32 / total as f32) * 100.0
+        } else {
+            0.0
+        };
+
+        assert_eq!(percentage, 0.0);
+    }
+
+    #[test]
+    fn test_percentage_calculation_with_normal_values() {
+        let total = 4;
+
+        // Test first iteration
+        let idx = 0;
+        let percentage = if total > 0 {
+            (idx as f32 / total as f32) * 100.0
+        } else {
+            0.0
+        };
+        assert_eq!(percentage, 0.0);
+
+        // Test middle iteration
+        let idx = 2;
+        let percentage = if total > 0 {
+            (idx as f32 / total as f32) * 100.0
+        } else {
+            0.0
+        };
+        assert_eq!(percentage, 50.0);
+
+        // Test last iteration
+        let idx = 3;
+        let percentage = if total > 0 {
+            (idx as f32 / total as f32) * 100.0
+        } else {
+            0.0
+        };
+        assert_eq!(percentage, 75.0);
     }
 }
 
