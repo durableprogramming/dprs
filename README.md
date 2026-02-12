@@ -9,7 +9,7 @@ DPRS is designed to assist in software development, not sysadmin or DevOps, and 
 ## Quick Install
 
 ```bash
-curl -fsSL https://get.durableprogramming.com | sh
+curl -fsSL https://get.durableprogramming.com/dprs | sh
 ```
 
 ```
