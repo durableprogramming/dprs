@@ -81,7 +81,10 @@ pub enum ContextMenuMatcher {
     #[serde(rename = "image")]
     ImagePattern { pattern: String },
     #[serde(rename = "label")]
-    LabelPattern { label: String, value: Option<String> },
+    LabelPattern {
+        label: String,
+        value: Option<String>,
+    },
     #[serde(rename = "compose_project")]
     ComposeProject,
 }
@@ -122,7 +125,8 @@ impl Default for ContextMenuConfig {
         // Example custom action for MySQL containers
         actions.push(ContextMenuAction {
             label: "MySQL Console (tmux)".to_string(),
-            command: "tmux new-window -n mysql-{name} \"docker exec -it {name} mysql -uroot -p\"".to_string(),
+            command: "tmux new-window -n mysql-{name} \"docker exec -it {name} mysql -uroot -p\""
+                .to_string(),
             matchers: vec![ContextMenuMatcher::ImagePattern {
                 pattern: "mysql".to_string(),
             }],
@@ -132,7 +136,8 @@ impl Default for ContextMenuConfig {
         // Example custom action for PostgreSQL containers
         actions.push(ContextMenuAction {
             label: "PostgreSQL Console (tmux)".to_string(),
-            command: "tmux new-window -n psql-{name} \"docker exec -it {name} psql -U postgres\"".to_string(),
+            command: "tmux new-window -n psql-{name} \"docker exec -it {name} psql -U postgres\""
+                .to_string(),
             matchers: vec![ContextMenuMatcher::ImagePattern {
                 pattern: "postgres".to_string(),
             }],

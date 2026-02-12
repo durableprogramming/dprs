@@ -325,7 +325,10 @@ impl AppState {
                 // Use cached stats or default to N/A
                 let (cpu_usage, memory_usage) = {
                     let cache = self.stats_cache.lock().unwrap();
-                    cache.get(&name).cloned().unwrap_or_else(|| ("N/A".to_string(), "N/A".to_string()))
+                    cache
+                        .get(&name)
+                        .cloned()
+                        .unwrap_or_else(|| ("N/A".to_string(), "N/A".to_string()))
                 };
 
                 self.containers.push(Container {
@@ -339,7 +342,7 @@ impl AppState {
                     image_hash: String::new(), // Will be filled by batch inspect
                     container_id: String::new(), // Will be filled by batch inspect
                     started_at: String::new(), // Will be filled by batch inspect
-                    compose_project: None, // Will be filled by batch inspect
+                    compose_project: None,     // Will be filled by batch inspect
                 });
                 if is_new {
                     self.new_container_indices.push(self.containers.len() - 1);
@@ -349,7 +352,8 @@ impl AppState {
 
         // Batch fetch metadata for all containers using Bollard
         if !self.containers.is_empty() {
-            let container_names: Vec<String> = self.containers.iter().map(|c| c.name.clone()).collect();
+            let container_names: Vec<String> =
+                self.containers.iter().map(|c| c.name.clone()).collect();
             if let Ok(metadata) = Self::batch_fetch_metadata(&container_names) {
                 for container in &mut self.containers {
                     if let Some(meta) = metadata.get(&container.name) {
@@ -797,7 +801,9 @@ impl AppState {
     }
 
     // Batch fetch container metadata using Bollard
-    fn batch_fetch_metadata(container_names: &[String]) -> Result<HashMap<String, ContainerMetadata>, Error> {
+    fn batch_fetch_metadata(
+        container_names: &[String],
+    ) -> Result<HashMap<String, ContainerMetadata>, Error> {
         use bollard::Docker;
 
         let runtime = tokio::runtime::Runtime::new()
@@ -810,7 +816,13 @@ impl AppState {
             let mut metadata_map = HashMap::new();
 
             for name in container_names {
-                if let Ok(inspect) = docker.inspect_container(name, None::<bollard::query_parameters::InspectContainerOptions>).await {
+                if let Ok(inspect) = docker
+                    .inspect_container(
+                        name,
+                        None::<bollard::query_parameters::InspectContainerOptions>,
+                    )
+                    .await
+                {
                     let ip_addresses: Vec<String> = inspect
                         .network_settings
                         .as_ref()
@@ -875,7 +887,10 @@ impl AppState {
     }
 
     // Async fetch stats for all containers (runs in background thread)
-    fn async_fetch_stats(container_names: Vec<String>, stats_cache: Arc<Mutex<HashMap<String, (String, String)>>>) {
+    fn async_fetch_stats(
+        container_names: Vec<String>,
+        stats_cache: Arc<Mutex<HashMap<String, (String, String)>>>,
+    ) {
         use bollard::Docker;
         use futures_util::StreamExt;
 
@@ -891,31 +906,37 @@ impl AppState {
             };
 
             for name in container_names {
-                let mut stream = docker.stats(&name, None::<bollard::query_parameters::StatsOptions>);
+                let mut stream =
+                    docker.stats(&name, None::<bollard::query_parameters::StatsOptions>);
 
                 if let Some(Ok(stats)) = stream.next().await {
                     // Calculate CPU percentage
-                    let cpu_delta = stats.cpu_stats
+                    let cpu_delta = stats
+                        .cpu_stats
                         .as_ref()
                         .and_then(|cs| cs.cpu_usage.as_ref())
                         .and_then(|cu| cu.total_usage)
                         .unwrap_or(0) as f64
-                        - stats.precpu_stats
+                        - stats
+                            .precpu_stats
                             .as_ref()
                             .and_then(|cs| cs.cpu_usage.as_ref())
                             .and_then(|cu| cu.total_usage)
                             .unwrap_or(0) as f64;
 
-                    let system_delta = stats.cpu_stats
+                    let system_delta = stats
+                        .cpu_stats
                         .as_ref()
                         .and_then(|cs| cs.system_cpu_usage)
                         .unwrap_or(0) as f64
-                        - stats.precpu_stats
+                        - stats
+                            .precpu_stats
                             .as_ref()
                             .and_then(|cs| cs.system_cpu_usage)
                             .unwrap_or(0) as f64;
 
-                    let number_cpus = stats.cpu_stats
+                    let number_cpus = stats
+                        .cpu_stats
                         .as_ref()
                         .and_then(|cs| cs.online_cpus)
                         .unwrap_or(1) as f64;
@@ -929,11 +950,13 @@ impl AppState {
                     let cpu_usage = format!("{:.2}%", cpu_percent);
 
                     // Format memory usage
-                    let mem_usage = stats.memory_stats
+                    let mem_usage = stats
+                        .memory_stats
                         .as_ref()
                         .and_then(|ms| ms.usage)
                         .unwrap_or(0);
-                    let mem_limit = stats.memory_stats
+                    let mem_limit = stats
+                        .memory_stats
                         .as_ref()
                         .and_then(|ms| ms.limit)
                         .unwrap_or(1);

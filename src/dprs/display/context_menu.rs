@@ -43,7 +43,12 @@ impl ContextMenuState {
         }
     }
 
-    pub fn activate(&mut self, container: Option<Container>, project: Option<ComposeProject>, config: &Config) {
+    pub fn activate(
+        &mut self,
+        container: Option<Container>,
+        project: Option<ComposeProject>,
+        config: &Config,
+    ) {
         self.active = true;
         self.selected_index = 0;
         self.target_container = container.clone();
@@ -164,7 +169,12 @@ impl ContextMenuState {
         }
     }
 
-    fn check_container_label(&self, container_name: &str, label: &str, expected_value: Option<&str>) -> bool {
+    fn check_container_label(
+        &self,
+        container_name: &str,
+        label: &str,
+        expected_value: Option<&str>,
+    ) -> bool {
         let output = Command::new("docker")
             .args([
                 "inspect",
@@ -234,53 +244,77 @@ pub fn render_context_menu<B: Backend>(
 
     if let Some(ref container) = context_menu.target_container {
         // Add container information header
-        all_items.push(ListItem::new(Line::from(vec![
-            Span::styled("Container Information", Style::default().add_modifier(Modifier::BOLD).fg(config.get_color("text_highlight"))),
-        ])));
+        all_items.push(ListItem::new(Line::from(vec![Span::styled(
+            "Container Information",
+            Style::default()
+                .add_modifier(Modifier::BOLD)
+                .fg(config.get_color("text_highlight")),
+        )])));
         all_items.push(ListItem::new(Line::from(""))); // Separator
 
         // Container ID
         all_items.push(ListItem::new(Line::from(vec![
-            Span::styled("  Container ID: ", Style::default().fg(config.get_color("text_dim"))),
+            Span::styled(
+                "  Container ID: ",
+                Style::default().fg(config.get_color("text_dim")),
+            ),
             Span::raw(&container.container_id),
         ])));
 
         // Image Hash
         all_items.push(ListItem::new(Line::from(vec![
-            Span::styled("  Image Hash:   ", Style::default().fg(config.get_color("text_dim"))),
+            Span::styled(
+                "  Image Hash:   ",
+                Style::default().fg(config.get_color("text_dim")),
+            ),
             Span::raw(&container.image_hash),
         ])));
 
         // CPU Usage
         all_items.push(ListItem::new(Line::from(vec![
-            Span::styled("  CPU Usage:    ", Style::default().fg(config.get_color("text_dim"))),
+            Span::styled(
+                "  CPU Usage:    ",
+                Style::default().fg(config.get_color("text_dim")),
+            ),
             Span::raw(&container.cpu_usage),
         ])));
 
         // Memory Usage
         all_items.push(ListItem::new(Line::from(vec![
-            Span::styled("  Memory:       ", Style::default().fg(config.get_color("text_dim"))),
+            Span::styled(
+                "  Memory:       ",
+                Style::default().fg(config.get_color("text_dim")),
+            ),
             Span::raw(&container.memory_usage),
         ])));
 
         // Uptime/Started At
         all_items.push(ListItem::new(Line::from(vec![
-            Span::styled("  Started:      ", Style::default().fg(config.get_color("text_dim"))),
+            Span::styled(
+                "  Started:      ",
+                Style::default().fg(config.get_color("text_dim")),
+            ),
             Span::raw(format_started_time(&container.started_at)),
         ])));
 
         // Compose Project (if applicable)
         if let Some(ref project) = container.compose_project {
             all_items.push(ListItem::new(Line::from(vec![
-                Span::styled("  Compose:      ", Style::default().fg(config.get_color("text_dim"))),
+                Span::styled(
+                    "  Compose:      ",
+                    Style::default().fg(config.get_color("text_dim")),
+                ),
                 Span::raw(project),
             ])));
         }
 
         all_items.push(ListItem::new(Line::from(""))); // Separator
-        all_items.push(ListItem::new(Line::from(vec![
-            Span::styled("Actions", Style::default().add_modifier(Modifier::BOLD).fg(config.get_color("text_highlight"))),
-        ])));
+        all_items.push(ListItem::new(Line::from(vec![Span::styled(
+            "Actions",
+            Style::default()
+                .add_modifier(Modifier::BOLD)
+                .fg(config.get_color("text_highlight")),
+        )])));
         all_items.push(ListItem::new(Line::from(""))); // Separator
     }
 
@@ -300,10 +334,7 @@ pub fn render_context_menu<B: Backend>(
             };
 
             let line = Line::from(vec![
-                Span::styled(
-                    if is_selected { "▶ " } else { "  " },
-                    style,
-                ),
+                Span::styled(if is_selected { "▶ " } else { "  " }, style),
                 Span::styled(&action.label, style),
             ]);
 
@@ -321,19 +352,15 @@ pub fn render_context_menu<B: Backend>(
         "Context Menu"
     };
 
-    let list = List::new(all_items)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(title)
-                .border_type(BorderType::Rounded)
-                .border_style(
-                    Style::default()
-                        .fg(config.get_color("border_light"))
-                )
-                .style(Style::default().bg(config.get_color("background_dark")))
-                .padding(Padding::uniform(1)),
-        );
+    let list = List::new(all_items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(title)
+            .border_type(BorderType::Rounded)
+            .border_style(Style::default().fg(config.get_color("border_light")))
+            .style(Style::default().bg(config.get_color("background_dark")))
+            .padding(Padding::uniform(1)),
+    );
 
     f.render_widget(list, area);
 }

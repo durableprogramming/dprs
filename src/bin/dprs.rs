@@ -169,7 +169,9 @@ fn handle_normal_mode(
             let project = if app_state.compose_view_mode {
                 use dprs::dprs::display::compose_view::group_containers_by_project;
                 let projects = group_containers_by_project(app_state);
-                app_state.list_state.selected()
+                app_state
+                    .list_state
+                    .selected()
                     .and_then(|idx| projects.get(idx).cloned())
             } else {
                 None
@@ -566,10 +568,7 @@ fn handle_context_menu_keys(
 
                 std::thread::spawn(move || {
                     use std::process::Command;
-                    let _ = Command::new("sh")
-                        .arg("-c")
-                        .arg(&command)
-                        .spawn();
+                    let _ = Command::new("sh").arg("-c").arg(&command).spawn();
                 });
 
                 app_state.context_menu.deactivate();
