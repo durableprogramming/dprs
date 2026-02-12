@@ -16,6 +16,8 @@ pub struct Config {
     pub keybindings: KeyBindings,
     pub colors: ColorConfig,
     pub layout: LayoutConfig,
+    #[serde(default)]
+    pub context_menu: ContextMenuConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,6 +56,91 @@ pub struct LayoutConfig {
     pub show_headers: bool,
     pub column_widths: HashMap<String, u16>,
     pub show_borders: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextMenuConfig {
+    pub actions: Vec<ContextMenuAction>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContextMenuAction {
+    pub label: String,
+    pub command: String,
+    #[serde(default)]
+    pub matchers: Vec<ContextMenuMatcher>,
+    #[serde(default)]
+    pub enabled_when: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ContextMenuMatcher {
+    #[serde(rename = "name")]
+    NamePattern { pattern: String },
+    #[serde(rename = "image")]
+    ImagePattern { pattern: String },
+    #[serde(rename = "label")]
+    LabelPattern { label: String, value: Option<String> },
+    #[serde(rename = "compose_project")]
+    ComposeProject,
+}
+
+impl Default for ContextMenuConfig {
+    fn default() -> Self {
+        let mut actions = Vec::new();
+
+        // Default actions available for all containers
+        actions.push(ContextMenuAction {
+            label: "Stop".to_string(),
+            command: "stop {name}".to_string(),
+            matchers: vec![],
+            enabled_when: Some("running".to_string()),
+        });
+
+        actions.push(ContextMenuAction {
+            label: "Start".to_string(),
+            command: "start {name}".to_string(),
+            matchers: vec![],
+            enabled_when: Some("stopped".to_string()),
+        });
+
+        actions.push(ContextMenuAction {
+            label: "Restart".to_string(),
+            command: "restart {name}".to_string(),
+            matchers: vec![],
+            enabled_when: Some("running".to_string()),
+        });
+
+        actions.push(ContextMenuAction {
+            label: "Build & Restart".to_string(),
+            command: "docker-compose -f {compose_file} build {service} && docker-compose -f {compose_file} up -d {service}".to_string(),
+            matchers: vec![ContextMenuMatcher::ComposeProject],
+            enabled_when: None,
+        });
+
+        // Example custom action for MySQL containers
+        actions.push(ContextMenuAction {
+            label: "MySQL Console (tmux)".to_string(),
+            command: "tmux new-window -n mysql-{name} \"docker exec -it {name} mysql -uroot -p\"".to_string(),
+            matchers: vec![ContextMenuMatcher::ImagePattern {
+                pattern: "mysql".to_string(),
+            }],
+            enabled_when: Some("running".to_string()),
+        });
+
+        // Example custom action for PostgreSQL containers
+        actions.push(ContextMenuAction {
+            label: "PostgreSQL Console (tmux)".to_string(),
+            command: "tmux new-window -n psql-{name} \"docker exec -it {name} psql -U postgres\"".to_string(),
+            matchers: vec![ContextMenuMatcher::ImagePattern {
+                pattern: "postgres".to_string(),
+            }],
+            enabled_when: Some("running".to_string()),
+        });
+
+        Self { actions }
+    }
 }
 
 impl Default for Config {
@@ -214,6 +301,7 @@ impl Default for Config {
                 column_widths,
                 show_borders: true,
             },
+            context_menu: ContextMenuConfig::default(),
         }
     }
 }

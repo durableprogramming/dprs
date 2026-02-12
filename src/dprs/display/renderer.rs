@@ -21,6 +21,7 @@ use tachyonfx::{CellFilter, Duration, EffectManager, Interpolation};
 
 use crate::dprs::app::state_machine::AppState;
 use crate::dprs::display::compose_view::render_compose_view;
+use crate::dprs::display::context_menu::render_context_menu;
 use crate::dprs::display::filter_input::render_filter_input;
 use crate::dprs::display::hotkey_bar::render_hotkey_bar;
 use crate::dprs::display::process_list::render_container_list;
@@ -128,6 +129,9 @@ pub fn draw<B: Backend>(
     if app_state.is_progress_active() && config.general.experimental_fx {
         render_progress_modal(f, app_state, size, &*config, effects, elapsed);
     }
+
+    // Render context menu if active
+    render_context_menu::<B>(f, &app_state.context_menu, &*config);
 }
 
 fn render_status_line(

@@ -6,20 +6,28 @@
 // lists, select containers, and refresh container data by querying the
 // Docker CLI. This serves as the central data model for the application.
 
+use crate::dprs::display::context_menu::ContextMenuState;
 use crate::dprs::modes::{CommandState, Mode, SearchState, VisualSelection};
 use ratatui::widgets::{ListState, TableState};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::Error;
 use std::process::Command;
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Container {
     pub name: String,
     pub image: String,
     pub status: String,
     pub ip_address: String,
     pub ports: String,
+    pub cpu_usage: String,
+    pub memory_usage: String,
+    pub image_hash: String,
+    pub container_id: String,
+    pub started_at: String,
+    pub compose_project: Option<String>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -86,6 +94,13 @@ pub enum AppEvent {
     // Command Mode
     ExecuteCommand,
     CancelCommand,
+
+    // Context Menu
+    OpenContextMenu,
+    CloseContextMenu,
+    ContextMenuNext,
+    ContextMenuPrevious,
+    ContextMenuExecute,
 }
 
 pub struct AppState {
@@ -106,6 +121,9 @@ pub struct AppState {
     pub search_state: SearchState,
     pub last_normal_position: usize,
 
+    // Context menu
+    pub context_menu: ContextMenuState,
+
     // Progress modal
     pub progress_modal: ProgressModal,
     pub progress_receiver: Option<Receiver<ProgressUpdate>>,
@@ -116,6 +134,9 @@ pub struct AppState {
 
     // Exit flag
     pub exit_requested: bool,
+
+    // Stats cache (updated asynchronously)
+    pub stats_cache: Arc<Mutex<HashMap<String, (String, String)>>>, // container_name -> (cpu, memory)
 }
 
 #[derive(Clone)]
@@ -159,6 +180,8 @@ impl AppState {
         let mut table_state = TableState::default();
         table_state.select(Some(0));
 
+        let stats_cache = Arc::new(Mutex::new(HashMap::new()));
+
         Self {
             containers: Vec::new(),
             list_state,
@@ -174,6 +197,7 @@ impl AppState {
             command_state: CommandState::new(),
             search_state: SearchState::new(),
             last_normal_position: 0,
+            context_menu: ContextMenuState::new(),
             progress_modal: ProgressModal {
                 message: String::new(),
                 percentage: 0.0,
@@ -183,6 +207,7 @@ impl AppState {
             previous_container_names: HashSet::new(),
             new_container_indices: Vec::new(),
             exit_requested: false,
+            stats_cache,
         }
     }
 
@@ -295,34 +320,54 @@ impl AppState {
                 let status = parts[2].to_string();
                 let ports = parts[3].to_string();
 
-                // Get container IP address
-                let ip_output = Command::new("docker")
-                    .arg("inspect")
-                    .arg("--format")
-                    .arg("{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}")
-                    .arg(name.as_str())
-                    .output()
-                    .map_err(|e| Error::other(format!("Failed to get container IP: {}", e)))?;
-
-                let ip_address_raw = String::from_utf8_lossy(&ip_output.stdout)
-                    .trim()
-                    .to_string();
-
-                // Format IPs: comma-separated with space, max 3 IPs
-                let ip_address = format_ip_addresses(&ip_address_raw);
-
                 let is_new = !previous_names.contains(&name);
+
+                // Use cached stats or default to N/A
+                let (cpu_usage, memory_usage) = {
+                    let cache = self.stats_cache.lock().unwrap();
+                    cache.get(&name).cloned().unwrap_or_else(|| ("N/A".to_string(), "N/A".to_string()))
+                };
+
                 self.containers.push(Container {
-                    name,
+                    name: name.clone(),
                     image,
                     status,
-                    ip_address,
+                    ip_address: String::new(), // Will be filled by batch inspect
                     ports,
+                    cpu_usage,
+                    memory_usage,
+                    image_hash: String::new(), // Will be filled by batch inspect
+                    container_id: String::new(), // Will be filled by batch inspect
+                    started_at: String::new(), // Will be filled by batch inspect
+                    compose_project: None, // Will be filled by batch inspect
                 });
                 if is_new {
                     self.new_container_indices.push(self.containers.len() - 1);
                 }
             }
+        }
+
+        // Batch fetch metadata for all containers using Bollard
+        if !self.containers.is_empty() {
+            let container_names: Vec<String> = self.containers.iter().map(|c| c.name.clone()).collect();
+            if let Ok(metadata) = Self::batch_fetch_metadata(&container_names) {
+                for container in &mut self.containers {
+                    if let Some(meta) = metadata.get(&container.name) {
+                        container.ip_address = meta.ip_address.clone();
+                        container.image_hash = meta.image_hash.clone();
+                        container.container_id = meta.container_id.clone();
+                        container.started_at = meta.started_at.clone();
+                        container.compose_project = meta.compose_project.clone();
+                    }
+                }
+            }
+
+            // Spawn async task to fetch stats (non-blocking)
+            let stats_cache = Arc::clone(&self.stats_cache);
+            let container_names_for_stats = container_names.clone();
+            std::thread::spawn(move || {
+                Self::async_fetch_stats(container_names_for_stats, stats_cache);
+            });
         }
 
         // Update previous names for next refresh
@@ -750,6 +795,169 @@ impl AppState {
             self.table_state.select(Some(0));
         }
     }
+
+    // Batch fetch container metadata using Bollard
+    fn batch_fetch_metadata(container_names: &[String]) -> Result<HashMap<String, ContainerMetadata>, Error> {
+        use bollard::Docker;
+
+        let runtime = tokio::runtime::Runtime::new()
+            .map_err(|e| Error::other(format!("Failed to create runtime: {}", e)))?;
+
+        runtime.block_on(async {
+            let docker = Docker::connect_with_local_defaults()
+                .map_err(|e| Error::other(format!("Failed to connect to Docker: {}", e)))?;
+
+            let mut metadata_map = HashMap::new();
+
+            for name in container_names {
+                if let Ok(inspect) = docker.inspect_container(name, None::<bollard::query_parameters::InspectContainerOptions>).await {
+                    let ip_addresses: Vec<String> = inspect
+                        .network_settings
+                        .as_ref()
+                        .and_then(|ns| ns.networks.as_ref())
+                        .map(|networks| {
+                            networks
+                                .values()
+                                .filter_map(|network| network.ip_address.as_ref().cloned())
+                                .collect()
+                        })
+                        .unwrap_or_default();
+
+                    let ip_address = format_ip_addresses(&ip_addresses.join(" "));
+
+                    let started_at = inspect
+                        .state
+                        .as_ref()
+                        .and_then(|s| s.started_at.as_ref())
+                        .cloned()
+                        .unwrap_or_default();
+
+                    let image_hash = inspect
+                        .image
+                        .as_ref()
+                        .map(|img| {
+                            if img.starts_with("sha256:") {
+                                img.chars().skip(7).take(12).collect()
+                            } else {
+                                img.chars().take(12).collect()
+                            }
+                        })
+                        .unwrap_or_default();
+
+                    let container_id = inspect
+                        .id
+                        .as_ref()
+                        .map(|id| id.chars().take(12).collect())
+                        .unwrap_or_default();
+
+                    let compose_project = inspect
+                        .config
+                        .as_ref()
+                        .and_then(|c| c.labels.as_ref())
+                        .and_then(|labels| labels.get("com.docker.compose.project"))
+                        .cloned();
+
+                    metadata_map.insert(
+                        name.clone(),
+                        ContainerMetadata {
+                            ip_address,
+                            started_at,
+                            image_hash,
+                            container_id,
+                            compose_project,
+                        },
+                    );
+                }
+            }
+
+            Ok(metadata_map)
+        })
+    }
+
+    // Async fetch stats for all containers (runs in background thread)
+    fn async_fetch_stats(container_names: Vec<String>, stats_cache: Arc<Mutex<HashMap<String, (String, String)>>>) {
+        use bollard::Docker;
+        use futures_util::StreamExt;
+
+        let runtime = match tokio::runtime::Runtime::new() {
+            Ok(rt) => rt,
+            Err(_) => return,
+        };
+
+        runtime.block_on(async {
+            let docker = match Docker::connect_with_local_defaults() {
+                Ok(d) => d,
+                Err(_) => return,
+            };
+
+            for name in container_names {
+                let mut stream = docker.stats(&name, None::<bollard::query_parameters::StatsOptions>);
+
+                if let Some(Ok(stats)) = stream.next().await {
+                    // Calculate CPU percentage
+                    let cpu_delta = stats.cpu_stats
+                        .as_ref()
+                        .and_then(|cs| cs.cpu_usage.as_ref())
+                        .and_then(|cu| cu.total_usage)
+                        .unwrap_or(0) as f64
+                        - stats.precpu_stats
+                            .as_ref()
+                            .and_then(|cs| cs.cpu_usage.as_ref())
+                            .and_then(|cu| cu.total_usage)
+                            .unwrap_or(0) as f64;
+
+                    let system_delta = stats.cpu_stats
+                        .as_ref()
+                        .and_then(|cs| cs.system_cpu_usage)
+                        .unwrap_or(0) as f64
+                        - stats.precpu_stats
+                            .as_ref()
+                            .and_then(|cs| cs.system_cpu_usage)
+                            .unwrap_or(0) as f64;
+
+                    let number_cpus = stats.cpu_stats
+                        .as_ref()
+                        .and_then(|cs| cs.online_cpus)
+                        .unwrap_or(1) as f64;
+
+                    let cpu_percent = if system_delta > 0.0 && cpu_delta > 0.0 {
+                        (cpu_delta / system_delta) * number_cpus * 100.0
+                    } else {
+                        0.0
+                    };
+
+                    let cpu_usage = format!("{:.2}%", cpu_percent);
+
+                    // Format memory usage
+                    let mem_usage = stats.memory_stats
+                        .as_ref()
+                        .and_then(|ms| ms.usage)
+                        .unwrap_or(0);
+                    let mem_limit = stats.memory_stats
+                        .as_ref()
+                        .and_then(|ms| ms.limit)
+                        .unwrap_or(1);
+                    let mem_usage_mb = mem_usage as f64 / 1024.0 / 1024.0;
+                    let mem_limit_mb = mem_limit as f64 / 1024.0 / 1024.0;
+                    let memory_usage = format!("{:.1}MiB / {:.1}MiB", mem_usage_mb, mem_limit_mb);
+
+                    // Update cache
+                    if let Ok(mut cache) = stats_cache.lock() {
+                        cache.insert(name.clone(), (cpu_usage, memory_usage));
+                    }
+                }
+            }
+        });
+    }
+}
+
+#[derive(Clone)]
+struct ContainerMetadata {
+    ip_address: String,
+    started_at: String,
+    image_hash: String,
+    container_id: String,
+    compose_project: Option<String>,
 }
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

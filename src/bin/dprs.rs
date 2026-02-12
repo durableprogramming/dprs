@@ -156,7 +156,27 @@ fn handle_normal_mode(
 ) {
     use crossterm::event::{KeyCode, KeyModifiers};
 
+    // Handle context menu if active
+    if app_state.context_menu.active {
+        handle_context_menu_keys(key, app_state, toast_manager, config);
+        return;
+    }
+
     match key.code {
+        // Context menu
+        KeyCode::Char('.') => {
+            let container = app_state.get_selected_container().cloned();
+            let project = if app_state.compose_view_mode {
+                use dprs::dprs::display::compose_view::group_containers_by_project;
+                let projects = group_containers_by_project(app_state);
+                app_state.list_state.selected()
+                    .and_then(|idx| projects.get(idx).cloned())
+            } else {
+                None
+            };
+            app_state.context_menu.activate(container, project, config);
+        }
+
         // Quit
         KeyCode::Char('q') => app_state.request_exit(),
 
@@ -519,6 +539,44 @@ fn handle_filter_input(key: crossterm::event::KeyEvent, app_state: &mut AppState
             let mut text = app_state.filter_text.clone();
             text.push(c);
             app_state.update_filter(text);
+        }
+        _ => {}
+    }
+}
+
+fn handle_context_menu_keys(
+    key: crossterm::event::KeyEvent,
+    app_state: &mut AppState,
+    toast_manager: &mut ToastManager,
+    _config: &Config,
+) {
+    use crossterm::event::KeyCode;
+
+    match key.code {
+        KeyCode::Char('j') | KeyCode::Down => {
+            app_state.context_menu.next();
+        }
+        KeyCode::Char('k') | KeyCode::Up => {
+            app_state.context_menu.previous();
+        }
+        KeyCode::Enter => {
+            if let Some(command) = app_state.context_menu.execute_selected_action() {
+                // Execute the command in a shell
+                toast_manager.show("Executing action...", 2000);
+
+                std::thread::spawn(move || {
+                    use std::process::Command;
+                    let _ = Command::new("sh")
+                        .arg("-c")
+                        .arg(&command)
+                        .spawn();
+                });
+
+                app_state.context_menu.deactivate();
+            }
+        }
+        KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('.') => {
+            app_state.context_menu.deactivate();
         }
         _ => {}
     }
