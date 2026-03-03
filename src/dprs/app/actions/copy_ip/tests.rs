@@ -18,6 +18,13 @@ fn test_copy_ip_success() {
         status: "running".to_string(),
         ip_address: "192.168.1.100".to_string(),
         ports: "80:80".to_string(),
+        cpu_usage: "0%".to_string(),
+        memory_usage: "0MiB".to_string(),
+        image_hash: "abc123".to_string(),
+        container_id: "container123".to_string(),
+        started_at: "2025-01-01T00:00:00Z".to_string(),
+        compose_project: None,
+        labels: std::collections::HashMap::new(),
     }];
 
     // Select the container
@@ -43,6 +50,13 @@ fn test_copy_ip_no_selection() {
         status: "running".to_string(),
         ip_address: "192.168.1.100".to_string(),
         ports: "80:80".to_string(),
+        cpu_usage: "0%".to_string(),
+        memory_usage: "0MiB".to_string(),
+        image_hash: "abc123".to_string(),
+        container_id: "container123".to_string(),
+        started_at: "2025-01-01T00:00:00Z".to_string(),
+        compose_project: None,
+        labels: std::collections::HashMap::new(),
     }];
 
     // Clear selection

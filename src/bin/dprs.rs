@@ -24,9 +24,84 @@ use dprs::dprs::display::toast::ToastManager;
 use dprs::dprs::modes::Mode;
 use dprs::shared::config::Config;
 use dprs::shared::input::input_watcher::InputWatcher;
+use std::process::Command;
 use tachyonfx::EffectManager;
 
+fn print_etchosts() {
+    // Fetch running containers using docker ps
+    let output = match Command::new("docker")
+        .args(&[
+            "ps",
+            "--format",
+            "{{.Names}}|{{.ID}}",
+        ])
+        .output()
+    {
+        Ok(output) => output,
+        Err(e) => {
+            eprintln!("Failed to execute docker command: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    if !output.status.success() {
+        eprintln!(
+            "Docker command failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        std::process::exit(1);
+    }
+
+    let output_str = String::from_utf8_lossy(&output.stdout);
+    let containers: Vec<_> = output_str
+        .lines()
+        .filter_map(|line| {
+            let parts: Vec<&str> = line.split('|').collect();
+            if parts.len() >= 2 {
+                Some((parts[0].to_string(), parts[1].to_string()))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if containers.is_empty() {
+        eprintln!("No running containers found");
+        std::process::exit(0);
+    }
+
+    // Get IP address for each container
+    for (name, container_id) in containers {
+        let ip_output = match Command::new("docker")
+            .args(&[
+                "inspect",
+                "-f",
+                "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+                &container_id,
+            ])
+            .output()
+        {
+            Ok(output) => output,
+            Err(_) => continue,
+        };
+
+        if ip_output.status.success() {
+            let ip = String::from_utf8_lossy(&ip_output.stdout).trim().to_string();
+            if !ip.is_empty() {
+                println!("{}\t{}", ip, name);
+            }
+        }
+    }
+}
+
 fn main() -> Result<(), io::Error> {
+    // Check for --etchosts flag
+    let args: Vec<String> = std::env::args().collect();
+    if args.contains(&"--etchosts".to_string()) {
+        print_etchosts();
+        return Ok(());
+    }
+
     // Setup terminal
     enable_raw_mode()?;
     stdout().execute(EnterAlternateScreen)?;

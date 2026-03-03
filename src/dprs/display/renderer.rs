@@ -213,17 +213,10 @@ fn render_command_line(
     area: ratatui::layout::Rect,
     config: &Config,
 ) {
+    use ratatui::text::{Line, Span};
+
     match app_state.mode {
         Mode::Command => {
-            let input_text = format!(":{}", app_state.command_state.input);
-            let command_widget = Paragraph::new(input_text)
-                .style(
-                    Style::default()
-                        .fg(config.get_color("text_main"))
-                        .bg(config.get_color("mode_command")),
-                )
-                .block(Block::default().borders(Borders::ALL).title("Command"));
-
             let popup_area = ratatui::layout::Rect {
                 x: 0,
                 y: area.height.saturating_sub(3),
@@ -231,29 +224,82 @@ fn render_command_line(
                 height: 3,
             };
 
+            // Clear the buffer in the popup area to prevent ghosting
+            for y_pos in popup_area.y..popup_area.y + popup_area.height {
+                for x_pos in popup_area.x..popup_area.x + popup_area.width {
+                    if let Some(cell) = f.buffer_mut().cell_mut((x_pos, y_pos)) {
+                        cell.set_char(' ');
+                        cell.set_bg(config.get_color("mode_command"));
+                    }
+                }
+            }
+
+            let mode_indicator = Span::styled(
+                "-- COMMAND -- ",
+                Style::default()
+                    .fg(config.get_color("text_main"))
+                    .bg(config.get_color("mode_command")),
+            );
+            let input_text = Span::styled(
+                format!(":{}", app_state.command_state.input),
+                Style::default()
+                    .fg(config.get_color("text_main"))
+                    .bg(config.get_color("mode_command")),
+            );
+
+            let command_widget = Paragraph::new(Line::from(vec![mode_indicator, input_text]))
+                .style(Style::default().bg(config.get_color("mode_command")))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(config.get_color("border_main"))),
+                );
+
             f.render_widget(command_widget, popup_area);
         }
         Mode::Search => {
+            let popup_area = ratatui::layout::Rect {
+                x: 0,
+                y: area.height.saturating_sub(3),
+                width: area.width,
+                height: 3,
+            };
+
+            // Clear the buffer in the popup area to prevent ghosting
+            for y_pos in popup_area.y..popup_area.y + popup_area.height {
+                for x_pos in popup_area.x..popup_area.x + popup_area.width {
+                    if let Some(cell) = f.buffer_mut().cell_mut((x_pos, y_pos)) {
+                        cell.set_char(' ');
+                        cell.set_bg(config.get_color("mode_search"));
+                    }
+                }
+            }
+
+            let mode_indicator = Span::styled(
+                "-- SEARCH -- ",
+                Style::default()
+                    .fg(config.get_color("text_main"))
+                    .bg(config.get_color("mode_search")),
+            );
             let search_prefix = if app_state.search_state.is_forward {
                 "/"
             } else {
                 "?"
             };
-            let input_text = format!("{}{}", search_prefix, app_state.search_state.query);
-            let search_widget = Paragraph::new(input_text)
-                .style(
-                    Style::default()
-                        .fg(config.get_color("text_main"))
-                        .bg(config.get_color("mode_search")),
-                )
-                .block(Block::default().borders(Borders::ALL).title("Search"));
+            let input_text = Span::styled(
+                format!("{}{}", search_prefix, app_state.search_state.query),
+                Style::default()
+                    .fg(config.get_color("text_main"))
+                    .bg(config.get_color("mode_search")),
+            );
 
-            let popup_area = ratatui::layout::Rect {
-                x: 0,
-                y: area.height.saturating_sub(3),
-                width: area.width,
-                height: 3,
-            };
+            let search_widget = Paragraph::new(Line::from(vec![mode_indicator, input_text]))
+                .style(Style::default().bg(config.get_color("mode_search")))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(config.get_color("border_main"))),
+                );
 
             f.render_widget(search_widget, popup_area);
         }

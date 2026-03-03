@@ -44,6 +44,13 @@ fn test_container_list_render_with_containers() {
             status: "Up 2 hours".to_string(),
             ip_address: "172.17.0.2".to_string(),
             ports: "80/tcp, 443/tcp".to_string(),
+            cpu_usage: "0%".to_string(),
+            memory_usage: "0MiB".to_string(),
+            image_hash: "abc123".to_string(),
+            container_id: "container123".to_string(),
+            started_at: "2025-01-01T00:00:00Z".to_string(),
+            compose_project: None,
+            labels: std::collections::HashMap::new(),
         },
         Container {
             name: "database".to_string(),
@@ -51,6 +58,13 @@ fn test_container_list_render_with_containers() {
             status: "Up 1 day".to_string(),
             ip_address: "172.17.0.3".to_string(),
             ports: "5432/tcp".to_string(),
+            cpu_usage: "0%".to_string(),
+            memory_usage: "0MiB".to_string(),
+            image_hash: "abc123".to_string(),
+            container_id: "container123".to_string(),
+            started_at: "2025-01-01T00:00:00Z".to_string(),
+            compose_project: None,
+            labels: std::collections::HashMap::new(),
         },
     ];
     let config = Config::default();
@@ -78,6 +92,13 @@ fn test_container_list_with_selection() {
             status: "Up 2 hours".to_string(),
             ip_address: "172.17.0.2".to_string(),
             ports: "80/tcp, 443/tcp".to_string(),
+            cpu_usage: "0%".to_string(),
+            memory_usage: "0MiB".to_string(),
+            image_hash: "abc123".to_string(),
+            container_id: "container123".to_string(),
+            started_at: "2025-01-01T00:00:00Z".to_string(),
+            compose_project: None,
+            labels: std::collections::HashMap::new(),
         },
         Container {
             name: "database".to_string(),
@@ -85,6 +106,13 @@ fn test_container_list_with_selection() {
             status: "Up 1 day".to_string(),
             ip_address: "172.17.0.3".to_string(),
             ports: "5432/tcp".to_string(),
+            cpu_usage: "0%".to_string(),
+            memory_usage: "0MiB".to_string(),
+            image_hash: "abc123".to_string(),
+            container_id: "container123".to_string(),
+            started_at: "2025-01-01T00:00:00Z".to_string(),
+            compose_project: None,
+            labels: std::collections::HashMap::new(),
         },
     ];
 
@@ -114,6 +142,13 @@ fn test_container_list_styles() {
         status: "Up 3 minutes".to_string(),
         ip_address: "172.17.0.4".to_string(),
         ports: "8080:80/tcp".to_string(),
+        cpu_usage: "0%".to_string(),
+        memory_usage: "0MiB".to_string(),
+        image_hash: "abc123".to_string(),
+        container_id: "container123".to_string(),
+        started_at: "2025-01-01T00:00:00Z".to_string(),
+        compose_project: None,
+        labels: std::collections::HashMap::new(),
     }];
     let config = Config::default();
 

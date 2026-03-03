@@ -28,6 +28,7 @@ pub struct Container {
     pub container_id: String,
     pub started_at: String,
     pub compose_project: Option<String>,
+    pub labels: HashMap<String, String>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -343,6 +344,7 @@ impl AppState {
                     container_id: String::new(), // Will be filled by batch inspect
                     started_at: String::new(), // Will be filled by batch inspect
                     compose_project: None,     // Will be filled by batch inspect
+                    labels: HashMap::new(),    // Will be filled by batch inspect
                 });
                 if is_new {
                     self.new_container_indices.push(self.containers.len() - 1);
@@ -362,6 +364,7 @@ impl AppState {
                         container.container_id = meta.container_id.clone();
                         container.started_at = meta.started_at.clone();
                         container.compose_project = meta.compose_project.clone();
+                        container.labels = meta.labels.clone();
                     }
                 }
             }
@@ -862,12 +865,18 @@ impl AppState {
                         .map(|id| id.chars().take(12).collect())
                         .unwrap_or_default();
 
-                    let compose_project = inspect
+                    let labels_ref = inspect
                         .config
                         .as_ref()
-                        .and_then(|c| c.labels.as_ref())
+                        .and_then(|c| c.labels.as_ref());
+
+                    let compose_project = labels_ref
                         .and_then(|labels| labels.get("com.docker.compose.project"))
                         .cloned();
+
+                    let labels = labels_ref
+                        .map(|l| l.clone())
+                        .unwrap_or_default();
 
                     metadata_map.insert(
                         name.clone(),
@@ -877,6 +886,7 @@ impl AppState {
                             image_hash,
                             container_id,
                             compose_project,
+                            labels,
                         },
                     );
                 }
@@ -981,6 +991,7 @@ struct ContainerMetadata {
     image_hash: String,
     container_id: String,
     compose_project: Option<String>,
+    labels: HashMap<String, String>,
 }
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

@@ -91,58 +91,33 @@ pub enum ContextMenuMatcher {
 
 impl Default for ContextMenuConfig {
     fn default() -> Self {
-        let mut actions = Vec::new();
-
-        // Default actions available for all containers
-        actions.push(ContextMenuAction {
-            label: "Stop".to_string(),
-            command: "stop {name}".to_string(),
-            matchers: vec![],
-            enabled_when: Some("running".to_string()),
-        });
-
-        actions.push(ContextMenuAction {
-            label: "Start".to_string(),
-            command: "start {name}".to_string(),
-            matchers: vec![],
-            enabled_when: Some("stopped".to_string()),
-        });
-
-        actions.push(ContextMenuAction {
-            label: "Restart".to_string(),
-            command: "restart {name}".to_string(),
-            matchers: vec![],
-            enabled_when: Some("running".to_string()),
-        });
-
-        actions.push(ContextMenuAction {
-            label: "Build & Restart".to_string(),
-            command: "docker-compose -f {compose_file} build {service} && docker-compose -f {compose_file} up -d {service}".to_string(),
-            matchers: vec![ContextMenuMatcher::ComposeProject],
-            enabled_when: None,
-        });
-
-        // Example custom action for MySQL containers
-        actions.push(ContextMenuAction {
-            label: "MySQL Console (tmux)".to_string(),
-            command: "tmux new-window -n mysql-{name} \"docker exec -it {name} mysql -uroot -p\""
-                .to_string(),
-            matchers: vec![ContextMenuMatcher::ImagePattern {
-                pattern: "mysql".to_string(),
-            }],
-            enabled_when: Some("running".to_string()),
-        });
-
-        // Example custom action for PostgreSQL containers
-        actions.push(ContextMenuAction {
-            label: "PostgreSQL Console (tmux)".to_string(),
-            command: "tmux new-window -n psql-{name} \"docker exec -it {name} psql -U postgres\""
-                .to_string(),
-            matchers: vec![ContextMenuMatcher::ImagePattern {
-                pattern: "postgres".to_string(),
-            }],
-            enabled_when: Some("running".to_string()),
-        });
+        let actions = vec![
+            // Default actions available for all containers
+            ContextMenuAction {
+                label: "Stop".to_string(),
+                command: "stop {name}".to_string(),
+                matchers: vec![],
+                enabled_when: Some("running".to_string()),
+            },
+            ContextMenuAction {
+                label: "Start".to_string(),
+                command: "start {name}".to_string(),
+                matchers: vec![],
+                enabled_when: Some("stopped".to_string()),
+            },
+            ContextMenuAction {
+                label: "Restart".to_string(),
+                command: "restart {name}".to_string(),
+                matchers: vec![],
+                enabled_when: Some("running".to_string()),
+            },
+            ContextMenuAction {
+                label: "Build & Restart".to_string(),
+                command: "docker-compose -f {compose_file} build {service} && docker-compose -f {compose_file} up -d {service}".to_string(),
+                matchers: vec![ContextMenuMatcher::ComposeProject],
+                enabled_when: None,
+            },
+        ];
 
         Self { actions }
     }
