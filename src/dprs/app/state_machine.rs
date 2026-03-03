@@ -865,18 +865,13 @@ impl AppState {
                         .map(|id| id.chars().take(12).collect())
                         .unwrap_or_default();
 
-                    let labels_ref = inspect
-                        .config
-                        .as_ref()
-                        .and_then(|c| c.labels.as_ref());
+                    let labels_ref = inspect.config.as_ref().and_then(|c| c.labels.as_ref());
 
                     let compose_project = labels_ref
                         .and_then(|labels| labels.get("com.docker.compose.project"))
                         .cloned();
 
-                    let labels = labels_ref
-                        .map(|l| l.clone())
-                        .unwrap_or_default();
+                    let labels = labels_ref.cloned().unwrap_or_default();
 
                     metadata_map.insert(
                         name.clone(),

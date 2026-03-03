@@ -30,11 +30,7 @@ use tachyonfx::EffectManager;
 fn print_etchosts() {
     // Fetch running containers using docker ps
     let output = match Command::new("docker")
-        .args(&[
-            "ps",
-            "--format",
-            "{{.Names}}|{{.ID}}",
-        ])
+        .args(["ps", "--format", "{{.Names}}|{{.ID}}"])
         .output()
     {
         Ok(output) => output,
@@ -73,7 +69,7 @@ fn print_etchosts() {
     // Get IP address for each container
     for (name, container_id) in containers {
         let ip_output = match Command::new("docker")
-            .args(&[
+            .args([
                 "inspect",
                 "-f",
                 "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
@@ -86,7 +82,9 @@ fn print_etchosts() {
         };
 
         if ip_output.status.success() {
-            let ip = String::from_utf8_lossy(&ip_output.stdout).trim().to_string();
+            let ip = String::from_utf8_lossy(&ip_output.stdout)
+                .trim()
+                .to_string();
             if !ip.is_empty() {
                 println!("{}\t{}", ip, name);
             }

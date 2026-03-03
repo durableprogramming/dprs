@@ -262,7 +262,9 @@ impl CommandExecutor {
                     CommandResult::Error(format!("Failed to build {}: {}", project_name, error))
                 }
             }
-            Err(e) => CommandResult::Error(format!("Failed to execute docker compose build: {}", e)),
+            Err(e) => {
+                CommandResult::Error(format!("Failed to execute docker compose build: {}", e))
+            }
         }
     }
 
@@ -291,8 +293,8 @@ impl CommandExecutor {
         }
 
         // Handle label matching: label:value or label:/regex/
-        if spec.starts_with("label:") {
-            let label_spec = &spec[6..]; // Remove "label:" prefix
+        if let Some(label_spec) = spec.strip_prefix("label:") {
+            // Remove "label:" prefix
 
             // Check if it's a regex pattern: label:/regex/
             if label_spec.starts_with('/') && label_spec.ends_with('/') && label_spec.len() > 2 {
@@ -313,7 +315,7 @@ impl CommandExecutor {
                     // Match label with specific value
                     return containers
                         .iter()
-                        .filter(|c| c.labels.get(key).map_or(false, |v| v == value))
+                        .filter(|c| c.labels.get(key).is_some_and(|v| v == value))
                         .cloned()
                         .collect();
                 } else {
@@ -359,7 +361,9 @@ impl CommandExecutor {
         // Exact container name or ID match
         containers
             .iter()
-            .filter(|c| c.name == spec || c.name.starts_with(spec) || c.container_id.starts_with(spec))
+            .filter(|c| {
+                c.name == spec || c.name.starts_with(spec) || c.container_id.starts_with(spec)
+            })
             .cloned()
             .collect()
     }
@@ -405,11 +409,7 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
-    fn create_test_container(
-        name: &str,
-        image: &str,
-        labels: Vec<(&str, &str)>,
-    ) -> Container {
+    fn create_test_container(name: &str, image: &str, labels: Vec<(&str, &str)>) -> Container {
         let mut label_map = HashMap::new();
         for (k, v) in labels {
             label_map.insert(k.to_string(), v.to_string());
