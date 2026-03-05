@@ -12,7 +12,7 @@ keywords = ["docker", "tui", "cli", "process-manager", "logs"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
-bollard = "0.19.2"
+bollard = "0.20.1"
 copypasta = "0.10.2"
 copypasta-ext = "0.4.4"
 crossterm = "0.29.0"
