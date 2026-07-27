@@ -298,7 +298,7 @@ fn handle_normal_mode(
                     }
                 }
             } else {
-                match actions::stop_container(app_state) {
+                match actions::stop_container(app_state, &*config) {
                     Ok(_) => toast_manager.show("Stop command sent. Refreshing list...", 2000),
                     Err(e) => toast_manager.show(&format!("Error stopping container: {}", e), 3000),
                 }

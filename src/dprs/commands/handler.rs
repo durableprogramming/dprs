@@ -6,7 +6,8 @@
 
 use crate::dprs::app::state_machine::{AppState, Container};
 use regex::Regex;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::thread;
 
 #[derive(Debug, Clone)]
 pub enum CommandResult {
@@ -368,21 +369,39 @@ impl CommandExecutor {
             .collect()
     }
 
+    /// Runs `docker <operation> <container>` on a background thread.
+    ///
+    /// This does not wait for the command to finish. `docker stop` and
+    /// `docker restart` send SIGTERM and then wait out a grace period (10
+    /// seconds by default) before killing the container; blocking on that would
+    /// freeze the TUI event loop for the duration.
+    ///
+    /// The consequence is that the returned `CommandResult` reports only that
+    /// the command was dispatched, not whether Docker succeeded. Failures
+    /// surface through the periodic container refresh — the container simply
+    /// stays in its previous state — rather than as an error toast. Callers
+    /// needing a confirmed outcome must poll the container list.
     fn docker_operation(&self, operation: &str, container_name: &str) -> CommandResult {
+        let operation = operation.to_string();
+        let name = container_name.to_string();
+
+        // stdout/stderr are discarded rather than inherited: the TUI owns the
+        // terminal, and anything docker printed would corrupt the display.
         match Command::new("docker")
-            .args([operation, container_name])
-            .output()
+            .args([&operation, &name])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
         {
-            Ok(output) => {
-                if output.status.success() {
-                    CommandResult::Success(format!("{} {}", operation, container_name))
-                } else {
-                    let error = String::from_utf8_lossy(&output.stderr);
-                    CommandResult::Error(format!(
-                        "Failed to {} {}: {}",
-                        operation, container_name, error
-                    ))
-                }
+            Ok(child) => {
+                // Reap the child on a background thread so it does not linger
+                // as a zombie, and so the grace period never blocks the UI.
+                thread::spawn(move || {
+                    let mut child = child;
+                    let _ = child.wait();
+                });
+                CommandResult::Success(format!("{} {}", operation, name))
             }
             Err(e) => {
                 CommandResult::Error(format!("Failed to execute docker {}: {}", operation, e))

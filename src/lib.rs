@@ -14,5 +14,6 @@
 pub mod dplw;
 pub mod dprs;
 pub mod shared;
+pub mod verification;
 
 // Copyright (c) 2025 Durable Programming, LLC. All rights reserved.

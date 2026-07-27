@@ -30,7 +30,13 @@ chrono = "0.4"
 
 [dev-dependencies]
 insta = "1.43.1"
-mockall = "0.13.1" 
+mockall = "0.13.1"
+
+# `cfg(kani)` is set by the Kani model checker, which is not part of the stable
+# toolchain. Declaring it here keeps `cargo clippy -- -D warnings` from failing
+# on an unexpected-cfg warning for the verification harnesses.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
 
 [[bin]]
 name = "dprs"
